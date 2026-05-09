@@ -88,8 +88,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-kotlin"
-version = "0.3.9"
+name = "tree-sitter-kotlin-sg"
+version = "0.4.1"
 dependencies = [
  "cc",
  "tree-sitter",
