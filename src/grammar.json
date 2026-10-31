@@ -6049,6 +6049,18 @@
                     ]
                   },
                   {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "_else_hint"
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
                     "type": "STRING",
                     "value": "else"
                   },
@@ -8706,6 +8718,10 @@
     {
       "type": "SYMBOL",
       "name": "_brace_hint"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_else_hint"
     }
   ],
   "inline": [],

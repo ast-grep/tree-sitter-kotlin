@@ -190,6 +190,9 @@ module.exports = grammar({
     // construct before it, a declaration's optional body or the trailing lambda after a call's
     // arguments, so the scanner inserts no semicolon there (see newline_bracket_continues).
     $._brace_hint,
+    // Never produced: valid exactly where an `if` may take its `else`, so the scanner can tell
+    // an if's `else` on the next line from a when entry `else if guard ->`.
+    $._else_hint,
   ],
 
   extras: $ => [
@@ -1192,6 +1195,7 @@ module.exports = grammar({
         seq(
           optional(field('consequence', $.control_structure_body)),
           optional(";"),
+          optional($._else_hint),
           "else",
           choice(field('alternative', $.control_structure_body), ";")
         ),

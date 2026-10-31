@@ -18,6 +18,7 @@ enum TokenType {
   INTERPOLATION_IDENTIFIER_START,
   BY_DELEGATION_HINT,
   BRACE_HINT,
+  ELSE_HINT,
 };
 
 /* Pretty much all of this code is taken from the Julia tree-sitter
@@ -465,6 +466,15 @@ static bool newline_bracket_continues(int32_t bracket, const bool *valid_symbols
   }
 }
 
+// Called with the lexer just past `else` after a newline; true if the `else` belongs to the
+// expression before it. It does when that is an `if` still open for its `else`: the parser then
+// expects ELSE_HINT, a token that is never produced (or all symbols, in error recovery). Otherwise
+// it starts a when entry, `else ->` or `else if guard ->`.
+static bool else_continues(TSLexer *lexer, const bool *valid_symbols) {
+  if (!valid_symbols[ELSE_HINT]) return false;
+  return !followed_by_arrow(lexer);
+}
+
 // `catch` and `finally` are soft keywords: after a newline they continue a try expression
 // only as `catch (` and `finally {`; otherwise they are names, as in `catch.delete()`.
 static bool word_then(TSLexer *lexer, const char *rest, unsigned len, int32_t next) {
@@ -601,8 +611,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
               return true;
             case 'e':
               if (scan_for_word(lexer, "lse", 3)) {
-                if (followed_by_arrow(lexer)) return true;
-                return false;
+                return !else_continues(lexer, valid_symbols);
               }
               return true;
             case 'a':
@@ -709,7 +718,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
             case 'e':
               lexer->mark_end(lexer);
               if (scan_for_word(lexer, "lse", 3)) {
-                if (followed_by_arrow(lexer)) return true;
+                if (!else_continues(lexer, valid_symbols)) return true;
                 lexer->result_symbol = MULTILINE_COMMENT;
                 return true;
               }
@@ -777,11 +786,10 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
         return !(valid_symbols[BY_DELEGATION_HINT] &&
                  scan_for_word(lexer, "y", 1));
 
-      // Don't insert a semicolon before an else, unless it's
-      // followed by "->" (a when-entry's else, not an if-else).
+      // Don't insert a semicolon before the else of an if; do before a when entry's else.
       case 'e':
         if (!scan_for_word(lexer, "lse", 3)) return true;
-        return followed_by_arrow(lexer);
+        return !else_continues(lexer, valid_symbols);
 
       // Don't insert a semicolon before an as
       case 'a':

@@ -1688,6 +1688,115 @@ when (animal) {
             (value_arguments)))))))
 
 ================================================================================
+When entry with an else guard
+================================================================================
+
+fun f(x: Any) = when (x) {
+    is String -> a()
+    else if x.isEmpty() -> b()
+    else if (c) -> d
+    else -> e
+}
+
+fun g() {
+    if (a) b()
+    else if (c) d()
+    else e()
+    when {
+        a -> if (b) c
+             else d
+        else -> e
+    }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters
+      (parameter
+        (simple_identifier)
+        (user_type
+          (type_identifier))))
+    (function_body
+      (when_expression
+        (when_subject
+          (simple_identifier))
+        (when_entry
+          (when_condition
+            (type_test
+              (user_type
+                (type_identifier))))
+          (control_structure_body
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments)))))
+        (when_entry
+          (guard_condition
+            (call_expression
+              (navigation_expression
+                (simple_identifier)
+                (navigation_suffix
+                  (simple_identifier)))
+              (call_suffix
+                (value_arguments))))
+          (control_structure_body
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments)))))
+        (when_entry
+          (guard_condition
+            (parenthesized_expression
+              (simple_identifier)))
+          (control_structure_body
+            (simple_identifier)))
+        (when_entry
+          (control_structure_body
+            (simple_identifier))))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (if_expression
+          condition: (simple_identifier)
+          consequence: (control_structure_body
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments))))
+          alternative: (control_structure_body
+            (if_expression
+              condition: (simple_identifier)
+              consequence: (control_structure_body
+                (call_expression
+                  (simple_identifier)
+                  (call_suffix
+                    (value_arguments))))
+              alternative: (control_structure_body
+                (call_expression
+                  (simple_identifier)
+                  (call_suffix
+                    (value_arguments)))))))
+        (when_expression
+          (when_entry
+            (when_condition
+              (simple_identifier))
+            (control_structure_body
+              (if_expression
+                condition: (simple_identifier)
+                consequence: (control_structure_body
+                  (simple_identifier))
+                alternative: (control_structure_body
+                  (simple_identifier)))))
+          (when_entry
+            (control_structure_body
+              (simple_identifier))))))))
+
+================================================================================
 When expression with guard condition on the else branch
 ================================================================================
 
