@@ -97,3 +97,51 @@ fun main(){
             (navigation_suffix
               (simple_identifier)))
           (simple_identifier))))))
+
+================================================================================
+Augmented assignment to a cast
+================================================================================
+
+fun g() { c as MutableList<T> += child }
+fun h() { when (c) { is L -> c as M += d } }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (assignment
+          (directly_assignable_expression
+            (as_expression
+              (simple_identifier)
+              (user_type
+                (type_identifier)
+                (type_arguments
+                  (type_projection
+                    (user_type
+                      (type_identifier)))))))
+          (simple_identifier)))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (when_expression
+          (when_subject
+            (simple_identifier))
+          (when_entry
+            (when_condition
+              (type_test
+                (user_type
+                  (type_identifier))))
+            (control_structure_body
+              (assignment
+                (directly_assignable_expression
+                  (as_expression
+                    (simple_identifier)
+                    (user_type
+                      (type_identifier))))
+                (simple_identifier)))))))))
