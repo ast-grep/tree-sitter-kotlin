@@ -630,6 +630,9 @@ module.exports = grammar({
     _class_member_declaration: $ => choice(
       $._declaration,
       $.backing_field,
+      // Both accessors on the accessors' own line, `var x = 0\n  get private set`
+      prec(1, seq($.getter, $.setter)),
+      prec(1, seq($.setter, $.getter)),
       $.companion_object,
       $.anonymous_initializer,
       $.secondary_constructor

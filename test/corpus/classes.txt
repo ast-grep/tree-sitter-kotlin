@@ -1664,3 +1664,30 @@ class C : D(), E,
                   (string_content)))))))
       (user_type
         (type_identifier)))))
+
+================================================================================
+Getter and setter on one line below the property
+================================================================================
+
+class A {
+  var startIndex: Int = 0
+    get private set
+}
+
+---
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (binding_pattern_kind)
+        (variable_declaration
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (integer_literal))
+      (getter)
+      (setter
+        (modifiers
+          (visibility_modifier))))))

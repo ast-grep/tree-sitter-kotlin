@@ -1981,6 +1981,40 @@
           "name": "backing_field"
         },
         {
+          "type": "PREC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "getter"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "setter"
+              }
+            ]
+          }
+        },
+        {
+          "type": "PREC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "setter"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "getter"
+              }
+            ]
+          }
+        },
+        {
           "type": "SYMBOL",
           "name": "companion_object"
         },
