@@ -380,6 +380,17 @@ static bool followed_by_arrow(TSLexer *lexer) {
   return lexer->lookahead == '>';
 }
 
+// An explicit `;` is a statement separator, except the one Kotlin allows between an if's
+// consequence and its `else` (`if (c) a(); else b()`), which belongs to the if_expression.
+// Called after the `;` is consumed and marked; returns true for that `;`, so the caller
+// declines it and the internal lexer produces the literal `;` of if_expression.
+static bool semicolon_before_else(TSLexer *lexer) {
+  if (!skip_whitespace_and_comments(lexer)) return false;
+  if (lexer->lookahead != 'e') return false;
+  if (!scan_for_word(lexer, "lse", 3)) return false;
+  return !followed_by_arrow(lexer);
+}
+
 // Check if the current position has a visibility modifier (public, private,
 // protected, internal) followed by horizontal whitespace and "constructor".
 // Uses skip() — safe to call speculatively since no token boundary is changed.
@@ -577,7 +588,9 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
     if (lexer->lookahead == ';') {
       advance(lexer);
       lexer->mark_end(lexer);
-      return true;
+      if (!semicolon_before_else(lexer)) return true;
+      *consumed_token = true;
+      return false;
     }
 
     if (!iswspace(lexer->lookahead)) break;
@@ -614,7 +627,9 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case ';':
         advance(lexer);
         lexer->mark_end(lexer);
-        return true;
+        if (!semicolon_before_else(lexer)) return true;
+        *consumed_token = true;
+        return false;
 
       // Don't insert a semicolon in other cases
       default:
@@ -810,7 +825,9 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case ';':
         advance(lexer);
         lexer->mark_end(lexer);
-        return true;
+        if (!semicolon_before_else(lexer)) return true;
+        *consumed_token = true;
+        return false;
 
       default:
         return true;
