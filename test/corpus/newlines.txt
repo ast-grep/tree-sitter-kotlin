@@ -435,3 +435,106 @@ val y = 2
     (variable_declaration
       (simple_identifier))
     (integer_literal)))
+
+================================================================================
+Newline before a parenthesis ends the statement
+================================================================================
+
+fun f() {
+    val t = e as? F
+    (t)?.h()
+    a = foo(b)
+    (c as D).e = 1
+    when {
+        g -> Foo(b)
+        (c as? D)?.e() == true -> G(b)
+    }
+}
+
+class A
+(val x: Int)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (property_declaration
+          (binding_pattern_kind)
+          (variable_declaration
+            (simple_identifier))
+          (as_expression
+            (simple_identifier)
+            (user_type
+              (type_identifier))))
+        (call_expression
+          (navigation_expression
+            (parenthesized_expression
+              (simple_identifier))
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments)))
+        (assignment
+          (directly_assignable_expression
+            (simple_identifier))
+          (call_expression
+            (simple_identifier)
+            (call_suffix
+              (value_arguments
+                (value_argument
+                  (simple_identifier))))))
+        (assignment
+          (directly_assignable_expression
+            (parenthesized_expression
+              (as_expression
+                (simple_identifier)
+                (user_type
+                  (type_identifier))))
+            (navigation_suffix
+              (simple_identifier)))
+          (integer_literal))
+        (when_expression
+          (when_entry
+            (when_condition
+              (simple_identifier))
+            (control_structure_body
+              (call_expression
+                (simple_identifier)
+                (call_suffix
+                  (value_arguments
+                    (value_argument
+                      (simple_identifier)))))))
+          (when_entry
+            (when_condition
+              (equality_expression
+                (call_expression
+                  (navigation_expression
+                    (parenthesized_expression
+                      (as_expression
+                        (simple_identifier)
+                        (user_type
+                          (type_identifier))))
+                    (navigation_suffix
+                      (simple_identifier)))
+                  (call_suffix
+                    (value_arguments)))
+                (boolean_literal)))
+            (control_structure_body
+              (call_expression
+                (simple_identifier)
+                (call_suffix
+                  (value_arguments
+                    (value_argument
+                      (simple_identifier)))))))))))
+  (class_declaration
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (binding_pattern_kind)
+        (simple_identifier)
+        (user_type
+          (type_identifier))))))

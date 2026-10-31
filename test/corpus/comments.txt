@@ -810,13 +810,16 @@ fun foo() {
                     (integer_literal)))))))))))
 
 ================================================================================
-Comment before call parentheses
+Comment before a parenthesized statement
 ================================================================================
 
 fun foo() {
     bar
         // comment
-        (1, 2)
+        (baz as Qux).run()
+    bar
+        /* comment */
+        (baz).run()
 }
 
 --------------------------------------------------------------------------------
@@ -827,15 +830,29 @@ fun foo() {
     (function_value_parameters)
     (function_body
       (statements
+        (simple_identifier)
+        (line_comment)
         (call_expression
-          (simple_identifier)
-          (line_comment)
+          (navigation_expression
+            (parenthesized_expression
+              (as_expression
+                (simple_identifier)
+                (user_type
+                  (type_identifier))))
+            (navigation_suffix
+              (simple_identifier)))
           (call_suffix
-            (value_arguments
-              (value_argument
-                (integer_literal))
-              (value_argument
-                (integer_literal)))))))))
+            (value_arguments)))
+        (simple_identifier)
+        (multiline_comment)
+        (call_expression
+          (navigation_expression
+            (parenthesized_expression
+              (simple_identifier))
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments)))))))
 
 ================================================================================
 Try-catch with second catch on new line
