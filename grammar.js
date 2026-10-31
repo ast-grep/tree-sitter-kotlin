@@ -54,6 +54,10 @@ const DEC_DIGITS = token(sep1(/[0-9]+/, /_+/));
 const HEX_DIGITS = token(sep1(/[0-9a-fA-F]+/, /_+/));
 const BIN_DIGITS = token(sep1(/[01]+/, /_+/));
 const REAL_EXPONENT = token(seq(/[eE]/, optional(/[+-]/), DEC_DIGITS));
+// `?::` (and `??::`): Kotlin's lexer has no `?:` token, so the parser can skip the question marks
+// of a nullable receiver type before `::` (`skipQuestionMarksBeforeDoubleColon`). One token here,
+// since the elvis `?:` would otherwise win the longest match.
+const NULLABLE_DOUBLE_COLON = token(seq(repeat1("?"), "::"));
 
 // The operator forms of an expression over the operand `e`. The full grammar takes `$._expression`; the delegate
 // after `by` takes `$._expression_no_trailing_lambda`, so that no operand of it takes a trailing lambda.
@@ -138,8 +142,9 @@ const SOFT_KEYWORD_IDENTIFIERS = [
   "finally",
   // Batch 7: enum
   "enum",
-  // Batch 8: variance modifiers — skipped, causes new break on SoftKeywordsInTypeArguments.kt
-  // "out", "in" — too ambiguous in type parameter contexts
+  // Batch 8: the variance modifier `out` (`in` is a hard keyword). Kotlin decides `i < out.size` against
+  // type arguments by whether a `>` closes them (`tryParseTypeArgumentList`); here both readings fork.
+  "out",
 ];
 
 const UNARY_NAMES = [
@@ -193,6 +198,8 @@ module.exports = grammar({
     // `context(` starts context parameters or calls a function named `context`
     [$.context_parameters, $.simple_identifier],
     [$.parameter_modifiers],
+    // `out` is a variance modifier or an identifier: `List<out T>` against `i < out.size`
+    [$.type_projection_modifiers],
     [$.type_parameter_modifiers],
 
     // "<x>.<y> = z assignment conflicts with <x>.<y>() function call"
@@ -1055,15 +1062,20 @@ module.exports = grammar({
 
     indexing_suffix: $ => seq("[", sep1($._expression, ","), optional(','), "]"),
 
-    navigation_suffix: $ => seq(
-      // this introduces ambiguities with 'less than' for comparisons
-      optional($.type_arguments),
-      $._member_access_operator,
-      choice(
-        $.simple_identifier,
-        $.parenthesized_expression,
-        "class"
-      )
+    navigation_suffix: $ => choice(
+      seq(
+        // this introduces ambiguities with 'less than' for comparisons
+        optional($.type_arguments),
+        $._member_access_operator,
+        choice(
+          $.simple_identifier,
+          $.parenthesized_expression,
+          "class"
+        )
+      ),
+      // A callable reference on a nullable generic receiver type, `List<T>?::orEmpty`, the way
+      // `List<T>::size` is one; callable_reference takes `?::` after a simple name.
+      seq($.type_arguments, NULLABLE_DOUBLE_COLON, choice($.simple_identifier, "class")),
     ),
 
     call_suffix: $ => prec.left(seq(
@@ -1413,9 +1425,8 @@ module.exports = grammar({
     callable_reference: $ => seq(
       choice(
         seq(optional(alias($.simple_identifier, $.type_identifier)), "::"), // TODO
-        // A nullable receiver type, `String?::isNullOrBlank`. One token, since `?:` would
-        // otherwise win the longest match and read the `?` as the start of an elvis.
-        seq(alias($.simple_identifier, $.type_identifier), token(seq(repeat1("?"), "::"))),
+        // A nullable receiver type, `String?::isNullOrBlank`.
+        seq(alias($.simple_identifier, $.type_identifier), NULLABLE_DOUBLE_COLON),
       ),
       choice($.simple_identifier, "class")
     ),
