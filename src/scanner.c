@@ -21,6 +21,7 @@ enum TokenType {
   ELSE_HINT,
   PAREN_HINT,
   MODIFIER_HINT,
+  BLOCK_END_HINT,
 };
 
 /* Pretty much all of this code is taken from the Julia tree-sitter
@@ -618,6 +619,17 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
     return false;
 
   if (sameline) {
+    // Right after the `}` of a class body or a block (BLOCK_END_HINT), Kotlin starts the next
+    // declaration without a separator: a file's declarations (parseTopLevelDeclaration) and a class
+    // body's members follow each other, so generated code writes `}enum class E {`. A declaration
+    // keyword or modifier word there takes a semicolon; any other word (`else`, `catch`, `as`) does not.
+    if (valid_symbols[BLOCK_END_HINT] && iswalpha(lexer->lookahead)) {
+      char word[16];
+      unsigned len = read_word(lexer, word, sizeof(word));
+      if (len > 0 && (WORD_IN(word, DECLARATION_WORDS) || WORD_IN(word, MODIFIER_WORDS))) return true;
+      *consumed_token = true;
+      return false;
+    }
     switch (lexer->lookahead) {
       // Insert imaginary semicolon before an 'import' but not in front
       // of other words or keywords starting with 'i'

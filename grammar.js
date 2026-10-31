@@ -313,6 +313,9 @@ module.exports = grammar({
     // parameters of an accessor (see newline_bracket_continues).
     $._paren_hint,
     $._modifier_hint,
+    // Never produced: valid right after the `}` of a class body or a block, where Kotlin starts the
+    // next declaration without a semicolon or line break (`}enum class E`, see BLOCK_END_HINT).
+    $._block_end_hint,
   ],
 
   extras: $ => [
@@ -467,7 +470,7 @@ module.exports = grammar({
       $._class_parameters
     ),
 
-    class_body: $ => seq("{", optional($._class_member_declarations), "}"),
+    class_body: $ => seq("{", optional($._class_member_declarations), "}", optional($._block_end_hint)),
 
     _class_parameters: $ => seq(
       "(",
@@ -808,7 +811,8 @@ module.exports = grammar({
       "{",
       optional($._enum_entries),
       optional(seq(";", optional($._class_member_declarations))),
-      "}"
+      "}",
+      optional($._block_end_hint)
     ),
 
     _enum_entries: $ => seq(sep1($.enum_entry, ","), optional(",")),
@@ -947,7 +951,7 @@ module.exports = grammar({
     // keyword-led one (`if (c) val x = 1`) and rejects it, and none occurs in the IntelliJ monorepo.
     control_structure_body: $ => choice($._block, $._expression_statement),
 
-    _block: $ => prec(PREC.BLOCK, seq("{", optional($.statements), "}")),
+    _block: $ => prec(PREC.BLOCK, seq("{", optional($.statements), "}", optional($._block_end_hint))),
 
     _loop_statement: $ => choice(
       $.for_statement,

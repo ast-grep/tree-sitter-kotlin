@@ -142,3 +142,70 @@ class MyClass
   (multiline_comment)
   (class_declaration
     (type_identifier)))
+
+================================================================================
+Declarations right after a closing brace on the same line
+================================================================================
+
+enum class A {
+  X
+}enum class B {
+  Y
+}
+fun a() {}fun b() {}
+class C {
+  fun d() {}private fun e() {}
+}
+fun f() {
+  if (c) {}else {}
+  try {}catch (e: E) {}
+}
+
+---
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (enum_class_body
+      (enum_entry
+        (simple_identifier))))
+  (class_declaration
+    (type_identifier)
+    (enum_class_body
+      (enum_entry
+        (simple_identifier))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (simple_identifier)
+        (function_value_parameters)
+        (function_body))
+      (function_declaration
+        (modifiers
+          (visibility_modifier))
+        (simple_identifier)
+        (function_value_parameters)
+        (function_body))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (if_expression
+          condition: (simple_identifier)
+          consequence: (control_structure_body)
+          alternative: (control_structure_body))
+        (try_expression
+          (catch_block
+            (simple_identifier)
+            (user_type
+              (type_identifier))))))))
