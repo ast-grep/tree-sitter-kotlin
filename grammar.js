@@ -1281,8 +1281,12 @@ module.exports = grammar({
     ),
 
     callable_reference: $ => seq(
-      optional(alias($.simple_identifier, $.type_identifier)), // TODO
-      "::",
+      choice(
+        seq(optional(alias($.simple_identifier, $.type_identifier)), "::"), // TODO
+        // A nullable receiver type, `String?::isNullOrBlank`. One token, since `?:` would
+        // otherwise win the longest match and read the `?` as the start of an elvis.
+        seq(alias($.simple_identifier, $.type_identifier), token(seq(repeat1("?"), "::"))),
+      ),
       choice($.simple_identifier, "class")
     ),
 

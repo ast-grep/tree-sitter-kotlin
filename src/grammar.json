@@ -6560,22 +6560,65 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "simple_identifier"
-              },
-              "named": true,
-              "value": "type_identifier"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "simple_identifier"
+                      },
+                      "named": true,
+                      "value": "type_identifier"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "STRING",
+                  "value": "::"
+                }
+              ]
             },
             {
-              "type": "BLANK"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "simple_identifier"
+                  },
+                  "named": true,
+                  "value": "type_identifier"
+                },
+                {
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "REPEAT1",
+                        "content": {
+                          "type": "STRING",
+                          "value": "?"
+                        }
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "::"
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           ]
-        },
-        {
-          "type": "STRING",
-          "value": "::"
         },
         {
           "type": "CHOICE",

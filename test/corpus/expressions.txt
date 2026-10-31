@@ -1797,6 +1797,44 @@ fun g() {
               (simple_identifier))))))))
 
 ================================================================================
+Callable reference on a nullable receiver type
+================================================================================
+
+val a = f(String?::isNullOrBlank)
+val b = String?::isNullOrBlank
+fun g() = Any?::hashCode
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (call_expression
+      (simple_identifier)
+      (call_suffix
+        (value_arguments
+          (value_argument
+            (callable_reference
+              (type_identifier)
+              (simple_identifier)))))))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (callable_reference
+      (type_identifier)
+      (simple_identifier)))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (callable_reference
+        (type_identifier)
+        (simple_identifier)))))
+
+================================================================================
 When expression with guard condition on the else branch
 ================================================================================
 
