@@ -481,7 +481,10 @@ static bool newline_bracket_continues(int32_t bracket, const bool *valid_symbols
   }
 }
 
-static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) {
+// Sets *consumed_token when it returns false after reading into the next token (a word such as
+// `else`, an annotation, `!`): the caller must not lex another token from that position.
+static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
+                                     bool *consumed_token) {
   lexer->result_symbol = AUTOMATIC_SEMICOLON;
   lexer->mark_end(lexer);
 
@@ -536,6 +539,9 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) 
         return false;
     }
   }
+
+  *consumed_token = iswalpha(lexer->lookahead) || lexer->lookahead == '@' ||
+                    lexer->lookahead == '!';
 
   switch (lexer->lookahead) {
       case ',':
@@ -899,10 +905,13 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
   // valid_symbols when the parser is in a delegation context. The scanner
   // never emits it; it's used only as a context flag in scan_automatic_semicolon.
   if (valid_symbols[AUTOMATIC_SEMICOLON]) {
-    bool ret = scan_automatic_semicolon(lexer, valid_symbols);
+    bool consumed_token = false;
+    bool ret = scan_automatic_semicolon(lexer, valid_symbols, &consumed_token);
     // if we fail to find an automatic semicolon, it's still possible that we may
-    // want to lex a string or comment later
+    // want to lex a string or comment later, but not past a word the check read:
+    // in `if (c) "a"\n else "b"` the string start after `else` would swallow it.
     if (ret) return ret;
+    if (consumed_token) return false;
   }
 
   // Match dots in import identifiers, refusing dots that would cause

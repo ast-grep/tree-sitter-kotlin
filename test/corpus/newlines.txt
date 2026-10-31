@@ -787,3 +787,43 @@ val f = fun()
     (anonymous_function
       (function_value_parameters)
       (function_body))))
+
+================================================================================
+String after else on the next line
+================================================================================
+
+fun f() = when (x) {
+    A ->
+        if (c) "a"
+        else "b"
+    B -> "c"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (when_expression
+        (when_subject
+          (simple_identifier))
+        (when_entry
+          (when_condition
+            (simple_identifier))
+          (control_structure_body
+            (if_expression
+              condition: (simple_identifier)
+              consequence: (control_structure_body
+                (string_literal
+                  (string_content)))
+              alternative: (control_structure_body
+                (string_literal
+                  (string_content))))))
+        (when_entry
+          (when_condition
+            (simple_identifier))
+          (control_structure_body
+            (string_literal
+              (string_content))))))))
