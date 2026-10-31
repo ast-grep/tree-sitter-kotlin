@@ -465,6 +465,23 @@ static bool newline_bracket_continues(int32_t bracket, const bool *valid_symbols
   }
 }
 
+// `catch` and `finally` are soft keywords: after a newline they continue a try expression
+// only as `catch (` and `finally {`; otherwise they are names, as in `catch.delete()`.
+static bool word_then(TSLexer *lexer, const char *rest, unsigned len, int32_t next) {
+  if (!scan_for_word(lexer, rest, len)) return false;
+  while (iswspace(lexer->lookahead)) skip(lexer);
+  return lexer->lookahead == next;
+}
+
+// `::` after a newline starts a new expression (Kotlin's interruptedWithNewLine lets `:` but
+// not `::` continue one); `->` never starts one, it ends lambda parameters written as
+// `{ x\n -> }`. Called with the lexer at ':' or '-'; true means no semicolon.
+static bool colon_or_arrow_continues(TSLexer *lexer) {
+  int32_t first = lexer->lookahead;
+  skip(lexer);
+  return first == ':' ? lexer->lookahead != ':' : lexer->lookahead == '>';
+}
+
 // Sets *consumed_token when it returns false after reading into the next token (a word such as
 // `else`, an annotation, `!`): the caller must not lex another token from that position.
 static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
@@ -525,12 +542,12 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
   }
 
   *consumed_token = iswalpha(lexer->lookahead) || lexer->lookahead == '@' ||
-                    lexer->lookahead == '!';
+                    lexer->lookahead == '!' || lexer->lookahead == ':' ||
+                    lexer->lookahead == '-';
 
   switch (lexer->lookahead) {
       case ',':
       case '.':
-      case ':':
       case '*':
       case '%':
       case '>':
@@ -570,10 +587,12 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
           if (!skip_whitespace_and_comments(lexer)) return false;
           // Now check the next real token.
           switch (lexer->lookahead) {
-            case '.': case ',': case ':': case '*': case '%':
+            case '.': case ',': case '*': case '%':
             case '>': case '<': case '=':
             case '?': case '|': case '&': case '/':
               return false;
+            case ':': case '-':
+              return !colon_or_arrow_continues(lexer);
             case '(': case '[': case '{':
               return !newline_bracket_continues(lexer->lookahead, valid_symbols);
             case '!':
@@ -593,14 +612,14 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
               if (scan_for_word(lexer, "here", 4)) return false;
               return true;
             case 'c':
-              if (scan_for_word(lexer, "atch", 4)) return false;
+              if (word_then(lexer, "atch", 4, '(')) return false;
               return true;
             case 'b':
               if (valid_symbols[BY_DELEGATION_HINT] &&
                   scan_for_word(lexer, "y", 1)) return false;
               return true;
             case 'f':
-              if (scan_for_word(lexer, "inally", 6)) return false;
+              if (word_then(lexer, "inally", 6, '{')) return false;
               return true;
             default:
               return true;
@@ -740,8 +759,11 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       // statement could end, so this won't fire inside () or [] where
       // newlines don't terminate statements.
       case '+':
-      case '-':
         return true;
+
+      case ':':
+      case '-':
+        return !colon_or_arrow_continues(lexer);
 
       // Don't insert a semicolon before `!=`, but do insert one before a unary `!`.
       case '!':
@@ -819,11 +841,11 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
           return true;
         }
         // Not in constructor context — check for 'catch'
-        return !scan_for_word(lexer, "atch", 4);
+        return !word_then(lexer, "atch", 4, '(');
 
       // Don't insert a semicolon before finally (continues try_expression)
       case 'f':
-        return !scan_for_word(lexer, "inally", 6);
+        return !word_then(lexer, "inally", 6, '{');
 
       // Don't insert a semicolon before an annotation that precedes 'constructor'
       // e.g. `class Foo\n@Bar\nconstructor(...)` — the @Bar is a constructor modifier
