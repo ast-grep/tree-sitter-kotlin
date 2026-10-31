@@ -522,3 +522,50 @@ val (_, b) = pair
       (variable_declaration
         (simple_identifier)))
     (simple_identifier)))
+
+================================================================================
+Parenthesized statement is not a full-form destructuring
+================================================================================
+
+fun f() { (a).b() }
+fun g() { (c as D).e = 1 }
+fun h() { (i) }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (call_expression
+          (navigation_expression
+            (parenthesized_expression
+              (simple_identifier))
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments))))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (assignment
+          (directly_assignable_expression
+            (parenthesized_expression
+              (as_expression
+                (simple_identifier)
+                (user_type
+                  (type_identifier))))
+            (navigation_suffix
+              (simple_identifier)))
+          (integer_literal)))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (parenthesized_expression
+          (simple_identifier))))))

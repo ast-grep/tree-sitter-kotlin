@@ -571,7 +571,7 @@ module.exports = grammar({
 
     destructuring_declaration: $ => prec.right(seq(
       optional($.modifiers),
-      $.multi_variable_declaration,
+      alias($._full_multi_variable_declaration, $.multi_variable_declaration),
       optional($.type_constraints),
       "=",
       $._expression,
@@ -1034,6 +1034,37 @@ module.exports = grammar({
         optional(','),
         ']'
       ),
+    ),
+
+    // The full form `(val a, var b) = x` starts a declaration only when `val` or `var`
+    // follows the bracket, and every entry carries one (KotlinParsing.parseMultiDeclarationEntry,
+    // mode FULL). Without that, a statement `(a).b()` would be read as a destructuring entry.
+    _full_multi_variable_declaration: $ => choice(
+      seq(
+        '(',
+        sep1(alias($._full_name_based_destructuring_entry, $.variable_declaration), ','),
+        optional(','),
+        ')'
+      ),
+      seq(
+        '[',
+        sep1(alias($._full_positional_destructuring_entry, $.variable_declaration), ','),
+        optional(','),
+        ']'
+      ),
+    ),
+
+    _full_name_based_destructuring_entry: $ => seq(
+      $.binding_pattern_kind,
+      $.simple_identifier,
+      optional(seq(":", $._type)),
+      optional(seq("=", $.simple_identifier))
+    ),
+
+    _full_positional_destructuring_entry: $ => seq(
+      $.binding_pattern_kind,
+      $.simple_identifier,
+      optional(seq(":", $._type))
     ),
 
     lambda_parameters: $ => seq(sep1($._lambda_parameter, ","), optional(",")),
