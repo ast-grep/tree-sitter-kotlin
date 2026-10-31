@@ -551,7 +551,54 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
     }
   }
 
-  *consumed_token = iswalpha(lexer->lookahead) || lexer->lookahead == '@' ||
+  // Comments between the newline and the next token decide nothing: look past them, line and
+  // block comments alike, then decide by the token. A semicolon goes before the comments, at the
+  // newline (zero-width, as mark_end was not moved). If none goes there, no token is returned and
+  // the parser's lexer reads the comments from their start (`line_comment`, and the lexer rule
+  // of `multiline_comment` for a block comment). A bare `/` is a division.
+  // advance(), not skip(): skipping would move the token start past the comments, which only
+  // matters for the one case that returns them as a token, below.
+  bool skipped_comment = false;
+  bool nested_comment = false;
+  while (lexer->lookahead == '/') {
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' && !lexer->eof(lexer)) {
+        advance(lexer);
+      }
+    } else if (lexer->lookahead == '*') {
+      advance(lexer);
+      unsigned depth = 1;
+      while (depth > 0 && !lexer->eof(lexer)) {
+        if (lexer->lookahead == '*') {
+          advance(lexer);
+          if (lexer->lookahead == '/') { advance(lexer); depth--; }
+        } else if (lexer->lookahead == '/') {
+          advance(lexer);
+          if (lexer->lookahead == '*') { advance(lexer); depth++; nested_comment = true; }
+        } else {
+          advance(lexer);
+        }
+      }
+    } else {
+      *consumed_token = true;
+      return false;
+    }
+    skipped_comment = true;
+    while (iswspace(lexer->lookahead)) advance(lexer);
+  }
+  if (lexer->eof(lexer)) return true;
+
+  // The lexer rule cannot read a nested comment. Before an operator that continues the line,
+  // return the comments as one multiline_comment instead, up to that operator.
+  if (nested_comment && strchr(".,*%><=?|&", (int)lexer->lookahead) != NULL &&
+      lexer->lookahead != 0) {
+    lexer->mark_end(lexer);
+    lexer->result_symbol = MULTILINE_COMMENT;
+    return true;
+  }
+
+  *consumed_token = skipped_comment || iswalpha(lexer->lookahead) || lexer->lookahead == '@' ||
                     lexer->lookahead == '!' || lexer->lookahead == ':' ||
                     lexer->lookahead == '-';
 
@@ -573,189 +620,6 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case '{':
         return !newline_bracket_continues(lexer->lookahead, valid_symbols);
 
-      // Handle `/` — could be division, line comment, or block comment.
-      // For division: no ASI (continuation operator).
-      // For line comments (`//`): skip the comment(s) and check the next
-      // real token. If continuation, suppress ASI (return false — tree-sitter
-      // resets, parses line_comment internally, then re-checks ASI).
-      // If non-continuation, insert ASI (return true at original mark_end).
-      // For block comments (`/*`): advance through the comment and produce
-      // MULTILINE_COMMENT. The parser then re-calls the scanner for the ASI
-      // decision on whatever token follows the comment.
-      case '/': {
-        advance(lexer);
-        if (lexer->lookahead == '/') {
-          // Line comment — skip to end of line using skip() since
-          // line_comment is an internal token (the grammar handles it).
-          skip(lexer);
-          while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
-                 lexer->lookahead != 0 && !lexer->eof(lexer)) {
-            skip(lexer);
-          }
-          // Skip any whitespace and further comments after this line comment.
-          // A bare '/' (division) after comments is a continuation operator.
-          if (!skip_whitespace_and_comments(lexer)) return false;
-          // Now check the next real token.
-          switch (lexer->lookahead) {
-            case '.': case ',': case '*': case '%':
-            case '>': case '<': case '=':
-            case '?': case '|': case '&': case '/':
-              return false;
-            case ':': case '-':
-              return !colon_or_arrow_continues(lexer);
-            case '(': case '[': case '{':
-              return !newline_bracket_continues(lexer->lookahead, valid_symbols);
-            case '!':
-              skip(lexer);
-              if (lexer->lookahead == '=') return false;
-              return true;
-            case 'e':
-              if (scan_for_word(lexer, "lse", 3)) {
-                return !else_continues(lexer, valid_symbols);
-              }
-              return true;
-            case 'a':
-              if (scan_for_word(lexer, "s", 1)) return false;
-              return true;
-            case 'w':
-              if (scan_for_word(lexer, "here", 4)) return false;
-              return true;
-            case 'c':
-              if (word_then(lexer, "atch", 4, '(')) return false;
-              return true;
-            case 'b':
-              if (valid_symbols[BY_DELEGATION_HINT] &&
-                  scan_for_word(lexer, "y", 1)) return false;
-              return true;
-            case 'f':
-              if (word_then(lexer, "inally", 6, '{')) return false;
-              return true;
-            default:
-              return true;
-          }
-        } else if (lexer->lookahead == '*') {
-          // Block comment after a newline. Use advance() to read through the
-          // comment so the content is available for MULTILINE_COMMENT if we
-          // decide to produce it. DON'T call mark_end yet — we defer that
-          // decision until we know what follows the comment.
-          advance(lexer);
-          unsigned nesting_depth = 1;
-          bool after_star = false;
-          while (nesting_depth > 0 && !lexer->eof(lexer)) {
-            switch (lexer->lookahead) {
-              case '*':
-                advance(lexer);
-                after_star = true;
-                break;
-              case '/':
-                advance(lexer);
-                if (after_star) {
-                  after_star = false;
-                  nesting_depth--;
-                } else {
-                  if (lexer->lookahead == '*') {
-                    nesting_depth++;
-                    advance(lexer);
-                  }
-                  after_star = false;
-                }
-                break;
-              case '\0':
-                if (lexer->eof(lexer)) {
-                  // Unterminated block comment at EOF — produce it.
-                  lexer->result_symbol = MULTILINE_COMMENT;
-                  lexer->mark_end(lexer);
-                  return true;
-                }
-                // fallthrough
-              default:
-                advance(lexer);
-                after_star = false;
-                break;
-            }
-          }
-          // Skip whitespace after the block comment. Don't skip further
-          // comments — the continuation switch handles '/' and '*', so
-          // subsequent comments will be correctly treated as continuation.
-          // Skipping them here would swallow them (they'd never appear
-          // as separate tokens in the parse tree).
-          while (iswspace(lexer->lookahead)) skip(lexer);
-          // Check the next real token to decide: MULTILINE_COMMENT or ASI?
-          //
-          // IMPORTANT: For keyword checks (else, as, where, !=), we must
-          // call mark_end BEFORE scan_for_word/skip, because those functions
-          // advance the cursor past the keyword. If mark_end were called
-          // after, the MULTILINE_COMMENT span would swallow the keyword
-          // and the parser would never see it.
-          switch (lexer->lookahead) {
-            case '(': case '[': case '{':
-              if (!newline_bracket_continues(lexer->lookahead, valid_symbols)) return true;
-              lexer->mark_end(lexer);
-              lexer->result_symbol = MULTILINE_COMMENT;
-              return true;
-            case '.': case ',': case ':': case '%':
-            case '>': case '<': case '=':
-            case '?': case '|': case '&': case '/':
-            case '*':
-              // Continuation operator — produce MULTILINE_COMMENT.
-              lexer->mark_end(lexer);
-              lexer->result_symbol = MULTILINE_COMMENT;
-              return true;
-            case '!':
-              // mark_end before consuming '!' so it's not swallowed.
-              lexer->mark_end(lexer);
-              skip(lexer);
-              if (lexer->lookahead == '=') {
-                // != is continuation — produce MULTILINE_COMMENT.
-                lexer->result_symbol = MULTILINE_COMMENT;
-                return true;
-              }
-              // Unary ! — not continuation. Produce ASI at original
-              // position (mark_end was at P0 before, now at '!' position,
-              // but the token has no advance()d content past the comment,
-              // so tree-sitter will re-scan from here).
-              return true;
-            case 'e':
-              lexer->mark_end(lexer);
-              if (scan_for_word(lexer, "lse", 3)) {
-                if (!else_continues(lexer, valid_symbols)) return true;
-                lexer->result_symbol = MULTILINE_COMMENT;
-                return true;
-              }
-              return true;
-            case 'a':
-              lexer->mark_end(lexer);
-              if (scan_for_word(lexer, "s", 1)) {
-                lexer->result_symbol = MULTILINE_COMMENT;
-                return true;
-              }
-              return true;
-            case 'w':
-              lexer->mark_end(lexer);
-              if (scan_for_word(lexer, "here", 4)) {
-                lexer->result_symbol = MULTILINE_COMMENT;
-                return true;
-              }
-              return true;
-            case 'b':
-              if (valid_symbols[BY_DELEGATION_HINT]) {
-                lexer->mark_end(lexer);
-                if (scan_for_word(lexer, "y", 1)) {
-                  lexer->result_symbol = MULTILINE_COMMENT;
-                  return true;
-                }
-              }
-              return true;
-            default:
-              // the original position (P0, before the comment), so the
-              // ASI token is zero-width. The block comment will be
-              // re-scanned as MULTILINE_COMMENT on the next parse step.
-              return true;
-          }
-        }
-        // Bare `/` (not `//` or `/*`) — division. No ASI.
-        return false;
-      }
 
       // In Kotlin, `+` and `-` after a newline are always prefix operators,
       // not binary continuation. If a binary operation is intended, the

@@ -1575,6 +1575,12 @@ module.exports = grammar({
 
     line_comment: $ => token(seq('//', /.*/)),
 
+    // The scanner produces block comments, nested ones included. This lexer rule is its
+    // fallback for a comment it looked past to decide on a semicolon after a newline and then
+    // left unread, since it had already read beyond the comment's end (scanner.c,
+    // scan_automatic_semicolon). This form does not nest.
+    multiline_comment: $ => token(seq('/*', /[^*]*\*+([^/*][^*]*\*+)*/, '/')),
+
     // ==========
     // Separators and operations
     // ==========
