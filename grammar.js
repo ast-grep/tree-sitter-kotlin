@@ -464,7 +464,13 @@ module.exports = grammar({
     // Class members
     // ==========
 
-    _class_member_declarations: $ => repeat1(seq($._class_member_declaration, $._semi)),
+    // The last member needs no separator before the closing brace (`object O { const val X = 1 }`), as the
+    // last statement of a block.
+    _class_member_declarations: $ => seq(
+      $._class_member_declaration,
+      repeat(seq($._semi, $._class_member_declaration)),
+      optional($._semi),
+    ),
 
     _class_member_declaration: $ => choice(
       $._declaration,

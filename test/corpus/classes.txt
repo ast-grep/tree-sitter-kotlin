@@ -1101,3 +1101,55 @@ interface Foo<A, B> : ((T, A?) -> B?)
           (user_type
             (type_identifier))
           (quest))))))
+
+==================
+Class bodies on one line
+==================
+
+sealed class A { object B : A() }
+
+object O { const val X = 1; fun f() {} }
+
+enum class E { A, B; fun f() = 1 }
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (type_identifier)
+    (class_body
+      (object_declaration
+        (type_identifier)
+        (delegation_specifier
+          (constructor_invocation
+            (user_type
+              (type_identifier))
+            (value_arguments))))))
+  (object_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (modifiers
+          (property_modifier))
+        (binding_pattern_kind)
+        (variable_declaration
+          (simple_identifier))
+        (integer_literal))
+      (function_declaration
+        (simple_identifier)
+        (function_value_parameters)
+        (function_body))))
+  (class_declaration
+    (type_identifier)
+    (enum_class_body
+      (enum_entry
+        (simple_identifier))
+      (enum_entry
+        (simple_identifier))
+      (function_declaration
+        (simple_identifier)
+        (function_value_parameters)
+        (function_body
+          (integer_literal))))))
