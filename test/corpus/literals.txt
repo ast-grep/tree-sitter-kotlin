@@ -484,3 +484,30 @@ val regex = (prefix + suffix).toRegex()
           (simple_identifier)))
       (call_suffix
         (value_arguments)))))
+
+==================
+This in a short string template
+==================
+
+val a = "x $this y"
+val b = "$thisX"
+
+---
+
+(source_file
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (string_literal
+      (string_content)
+      (interpolation_identifier_start)
+      (interpolated_identifier)
+      (string_content)))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (string_literal
+      (interpolation_identifier_start)
+      (interpolated_identifier))))

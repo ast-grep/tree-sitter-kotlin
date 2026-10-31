@@ -375,3 +375,161 @@ val x = 1
     (binding_pattern_kind)
     (variable_declaration (simple_identifier))
     (integer_literal)))
+
+==================
+Annotated sealed interface with type parameters and annotation arguments
+==================
+
+@Serializable(with = OrBoolean.Serializer::class)
+sealed interface OrBoolean<out T> {
+    value class Boolean(val value: kotlin.Boolean) : OrBoolean<Nothing>
+}
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (type_identifier))
+          (value_arguments
+            (value_argument
+              (simple_identifier)
+              (navigation_expression
+                (navigation_expression
+                  (simple_identifier)
+                  (navigation_suffix
+                    (simple_identifier)))
+                (navigation_suffix))))))
+      (class_modifier))
+    (type_identifier)
+    (type_parameters
+      (type_parameter
+        (type_parameter_modifiers
+          (variance_modifier))
+        (type_identifier)))
+    (class_body
+      (class_declaration
+        (modifiers
+          (class_modifier))
+        (type_identifier)
+        (primary_constructor
+          (class_parameter
+            (binding_pattern_kind)
+            (simple_identifier)
+            (user_type
+              (type_identifier)
+              (type_identifier))))
+        (delegation_specifier
+          (user_type
+            (type_identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (type_identifier))))))))))
+
+==================
+Annotated open class with type parameters
+==================
+
+@A
+open class X<T> {
+    fun f() {}
+}
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (annotation
+        (user_type
+          (type_identifier)))
+      (inheritance_modifier))
+    (type_identifier)
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (class_body
+      (function_declaration
+        (simple_identifier)
+        (function_value_parameters)
+        (function_body)))))
+
+==================
+Annotations and a modifier on one line before a generic interface
+==================
+
+@A @B sealed interface X<T> {}
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (annotation
+        (user_type
+          (type_identifier)))
+      (annotation
+        (user_type
+          (type_identifier)))
+      (class_modifier))
+    (type_identifier)
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (class_body)))
+
+==================
+Annotated local sealed class with type parameters
+==================
+
+fun f() {
+    @A
+    sealed class X<T> {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (class_declaration
+          (modifiers
+            (annotation
+              (user_type
+                (type_identifier)))
+            (class_modifier))
+          (type_identifier)
+          (type_parameters
+            (type_parameter
+              (type_identifier)))
+          (class_body))))))
+
+==================
+Annotated enum class with type parameters
+==================
+
+@A
+enum class E<T> { A }
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (annotation
+        (user_type
+          (type_identifier))))
+    (type_identifier)
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (enum_class_body
+      (enum_entry
+        (simple_identifier)))))
