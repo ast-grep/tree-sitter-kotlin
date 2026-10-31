@@ -121,6 +121,7 @@ const SOFT_KEYWORD_IDENTIFIERS = [
   "crossinline",
   "reified",
   // Batch 5: annotation use-site targets (no conflict rules needed — disambiguated by ":")
+  "all",
   "field",
   "property",
   "receiver",
@@ -1623,7 +1624,8 @@ module.exports = grammar({
     ),
 
     use_site_target: $ => seq(
-      choice("field", "property", "get", "set", "receiver", "param", "setparam", "delegate"),
+      // `all` is the Kotlin 2.2 meta-target (`@all:A` applies A to every target of a property)
+      choice("all", "field", "property", "get", "set", "receiver", "param", "setparam", "delegate"),
       ":"
     ),
 
