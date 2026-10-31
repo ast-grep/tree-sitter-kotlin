@@ -88,7 +88,6 @@ ControlStructures
 DefaultKeyword
 DefinitelyNotNullType
 DoubleColon
-DoubleColonWhitespaces
 DynamicSoftKeyword
 DynamicTypes
 EmptyName

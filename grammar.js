@@ -54,10 +54,11 @@ const DEC_DIGITS = token(sep1(/[0-9]+/, /_+/));
 const HEX_DIGITS = token(sep1(/[0-9a-fA-F]+/, /_+/));
 const BIN_DIGITS = token(sep1(/[01]+/, /_+/));
 const REAL_EXPONENT = token(seq(/[eE]/, optional(/[+-]/), DEC_DIGITS));
-// `?::` (and `??::`): Kotlin's lexer has no `?:` token, so the parser can skip the question marks
-// of a nullable receiver type before `::` (`skipQuestionMarksBeforeDoubleColon`). One token here,
-// since the elvis `?:` would otherwise win the longest match.
-const NULLABLE_DOUBLE_COLON = token(seq(repeat1("?"), "::"));
+// `?::` (and `??::`, `? ::`): Kotlin's lexer has no `?:` token, so the parser can skip the question
+// marks of a nullable receiver type before `::`, whitespace and line breaks between them included
+// (`skipQuestionMarksBeforeDoubleColon` looks at tokens). One token here, since the elvis `?:` would
+// otherwise win the longest match.
+const NULLABLE_DOUBLE_COLON = token(seq("?", repeat(seq(/\s*/, "?")), /\s*/, "::"));
 
 // The operator forms of an expression over the operand `e`. The full grammar takes `$._expression`; the delegate
 // after `by` takes `$._expression_no_trailing_lambda`, so that no operand of it takes a trailing lambda.

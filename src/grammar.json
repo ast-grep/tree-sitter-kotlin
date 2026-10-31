@@ -5022,11 +5022,28 @@
                 "type": "SEQ",
                 "members": [
                   {
-                    "type": "REPEAT1",
+                    "type": "STRING",
+                    "value": "?"
+                  },
+                  {
+                    "type": "REPEAT",
                     "content": {
-                      "type": "STRING",
-                      "value": "?"
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "PATTERN",
+                          "value": "\\s*"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "?"
+                        }
+                      ]
                     }
+                  },
+                  {
+                    "type": "PATTERN",
+                    "value": "\\s*"
                   },
                   {
                     "type": "STRING",
@@ -7415,11 +7432,28 @@
                     "type": "SEQ",
                     "members": [
                       {
-                        "type": "REPEAT1",
+                        "type": "STRING",
+                        "value": "?"
+                      },
+                      {
+                        "type": "REPEAT",
                         "content": {
-                          "type": "STRING",
-                          "value": "?"
+                          "type": "SEQ",
+                          "members": [
+                            {
+                              "type": "PATTERN",
+                              "value": "\\s*"
+                            },
+                            {
+                              "type": "STRING",
+                              "value": "?"
+                            }
+                          ]
                         }
+                      },
+                      {
+                        "type": "PATTERN",
+                        "value": "\\s*"
                       },
                       {
                         "type": "STRING",

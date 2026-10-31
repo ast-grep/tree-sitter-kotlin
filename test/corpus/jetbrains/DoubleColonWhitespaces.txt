@@ -1,0 +1,68 @@
+==================
+DoubleColonWhitespaces
+==================
+
+// COMPILATION_ERRORS
+
+fun tests() {
+    a:: b
+    a ::b
+    a :: b
+
+    a?:: b
+    a ?::b
+    a ?:: b
+    a? ::b
+    a ? :: b
+    a ? ? :: b
+}
+
+fun breakLine() {
+    a?
+    ::b
+}
+
+---
+
+(source_file
+  (line_comment)
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))
+        (callable_reference
+          (type_identifier)
+          (simple_identifier)))))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (callable_reference
+          (type_identifier)
+          (simple_identifier))))))
