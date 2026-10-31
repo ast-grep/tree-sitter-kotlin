@@ -167,6 +167,12 @@ module.exports = grammar({
     // ambiguity between call_suffix and _generic_call_suffix (both can match type_arguments + args)
     [$.call_suffix, $._generic_call_suffix],
     [$._call_suffix_no_trailing_lambda, $._generic_call_suffix_no_trailing_lambda],
+
+    // `{ (a)` opens either a lambda with a destructured parameter, `{ (a) -> }`, or a block
+    // whose first statement is parenthesized, `{ (a).b() }`; only the `->` decides.
+    [$._lambda_destructuring_entry, $._primary_expression],
+    // `{ (val a` is a lambda parameter (`->`) or a full-form destructuring (`=`).
+    [$._lambda_destructuring_entry, $._full_name_based_destructuring_entry],
   ],
 
   externals: $ => [
@@ -1071,7 +1077,35 @@ module.exports = grammar({
 
     _lambda_parameter: $ => choice(
       $.variable_declaration,
-      seq($.multi_variable_declaration, optional(seq(":", $._type)))
+      seq(
+        alias($._lambda_multi_variable_declaration, $.multi_variable_declaration),
+        optional(seq(":", $._type))
+      )
+    ),
+
+    // A destructured lambda parameter. Its entries carry no static precedence, unlike
+    // `_name_based_destructuring_entry`, so that `{ (a)` stays open until `->` decides between
+    // a parameter and a parenthesized first statement.
+    _lambda_multi_variable_declaration: $ => choice(
+      seq(
+        '(',
+        sep1(alias($._lambda_destructuring_entry, $.variable_declaration), ','),
+        optional(','),
+        ')'
+      ),
+      seq(
+        '[',
+        sep1(alias($._positional_destructuring_entry, $.variable_declaration), ','),
+        optional(','),
+        ']'
+      ),
+    ),
+
+    _lambda_destructuring_entry: $ => seq(
+      optional($.binding_pattern_kind),
+      $.simple_identifier,
+      optional(seq(":", $._type)),
+      optional(seq("=", $.simple_identifier))
     ),
 
     anonymous_function: $ => prec.right(seq(

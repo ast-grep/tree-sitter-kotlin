@@ -569,3 +569,76 @@ fun h() { (i) }
       (statements
         (parenthesized_expression
           (simple_identifier))))))
+
+================================================================================
+Block or lambda starting with a parenthesized expression
+================================================================================
+
+fun f() {
+    if (c) {
+        (o).b = 1
+    }
+    run { (a) -> a }
+    run { (o)?.r() }
+    run { (val a, val b) -> a }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (if_expression
+          condition: (simple_identifier)
+          consequence: (control_structure_body
+            (statements
+              (assignment
+                (directly_assignable_expression
+                  (parenthesized_expression
+                    (simple_identifier))
+                  (navigation_suffix
+                    (simple_identifier)))
+                (integer_literal)))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (annotated_lambda
+              (lambda_literal
+                (lambda_parameters
+                  (multi_variable_declaration
+                    (variable_declaration
+                      (simple_identifier))))
+                (statements
+                  (simple_identifier))))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (annotated_lambda
+              (lambda_literal
+                (statements
+                  (call_expression
+                    (navigation_expression
+                      (parenthesized_expression
+                        (simple_identifier))
+                      (navigation_suffix
+                        (simple_identifier)))
+                    (call_suffix
+                      (value_arguments))))))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (annotated_lambda
+              (lambda_literal
+                (lambda_parameters
+                  (multi_variable_declaration
+                    (variable_declaration
+                      (binding_pattern_kind)
+                      (simple_identifier))
+                    (variable_declaration
+                      (binding_pattern_kind)
+                      (simple_identifier))))
+                (statements
+                  (simple_identifier))))))))))
