@@ -267,6 +267,54 @@ fun f() {
                       (value_arguments))))))))))))
 
 ================================================================================
+Where as a name at the start of a line
+================================================================================
+
+fun f() {
+  where = q
+  when {
+    where == null -> {}
+  }
+}
+fun <T> g(): T
+  where T : Any = x
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (assignment
+          (directly_assignable_expression
+            (simple_identifier))
+          (simple_identifier))
+        (when_expression
+          (when_entry
+            (when_condition
+              (equality_expression
+                (simple_identifier)
+                (null_literal)))
+            (control_structure_body))))))
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (simple_identifier)
+    (function_value_parameters)
+    (user_type
+      (type_identifier))
+    (type_constraints
+      (type_constraint
+        (type_identifier)
+        (user_type
+          (type_identifier))))
+    (function_body
+      (simple_identifier))))
+
+================================================================================
 Modifiers on their own lines before a top-level declaration
 ================================================================================
 

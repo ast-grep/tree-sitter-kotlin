@@ -391,6 +391,27 @@ static bool semicolon_before_else(TSLexer *lexer) {
   return !followed_by_arrow(lexer);
 }
 
+// `where` on a new line continues a declaration only as its type constraints, `where T : Bound` or
+// `where @A T : Bound`; otherwise it is the soft keyword used as a name (`where == null -> ...`,
+// `where = p`) and starts a new statement. Called after scan_for_word has matched "where".
+static bool where_starts_constraints(TSLexer *lexer) {
+  if (!skip_whitespace_and_comments(lexer)) return false;
+  if (lexer->lookahead == '@') return true;
+  if (lexer->lookahead == '`') {
+    skip(lexer);
+    while (lexer->lookahead != '`' && lexer->lookahead != '\n' && !lexer->eof(lexer)) skip(lexer);
+    if (lexer->lookahead != '`') return false;
+    skip(lexer);
+  } else {
+    if (!is_word_char(lexer->lookahead)) return false;
+    while (is_word_char(lexer->lookahead)) skip(lexer);
+  }
+  if (!skip_whitespace_and_comments(lexer)) return false;
+  if (lexer->lookahead != ':') return false;
+  skip(lexer);
+  return lexer->lookahead != ':';
+}
+
 // Check if the current position has a visibility modifier (public, private,
 // protected, internal) followed by horizontal whitespace and "constructor".
 // Uses skip() — safe to call speculatively since no token boundary is changed.
@@ -752,9 +773,9 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case 'a':
         return !scan_for_word(lexer, "s", 1);
 
-      // Don't insert a semicolon before a where
+      // Don't insert a semicolon before the `where` of type constraints
       case 'w':
-        return !scan_for_word(lexer, "here", 4);
+        return !(scan_for_word(lexer, "here", 4) && where_starts_constraints(lexer));
 
       // Don't insert a semicolon before `instanceof`, or before `internal`
       // when followed by `constructor` in a class declaration context.
