@@ -470,3 +470,63 @@ typealias Foo = (Int, String,) -> Unit
           (type_identifier)))
       (user_type
         (type_identifier)))))
+
+==================
+Annotated function types
+==================
+
+fun f(
+    a: @Composable () -> Unit,
+    b: @Composable ((String?, Color) -> Unit)? = null,
+    c: @A(1) Int,
+) {}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters
+      (parameter
+        (simple_identifier)
+        (type_modifiers
+          (annotation
+            (user_type
+              (type_identifier))))
+        (function_type
+          (function_type_parameters)
+          (user_type
+            (type_identifier))))
+      (parameter
+        (simple_identifier)
+        (type_modifiers
+          (annotation
+            (user_type
+              (type_identifier))))
+        (nullable_type
+          (parenthesized_type
+            (function_type
+              (function_type_parameters
+                (nullable_type
+                  (user_type
+                    (type_identifier))
+                  (quest))
+                (user_type
+                  (type_identifier)))
+              (user_type
+                (type_identifier))))
+          (quest)))
+      (null_literal)
+      (parameter
+        (simple_identifier)
+        (type_modifiers
+          (annotation
+            (constructor_invocation
+              (user_type
+                (type_identifier))
+              (value_arguments
+                (value_argument
+                  (integer_literal))))))
+        (user_type
+          (type_identifier))))
+    (function_body)))

@@ -6056,12 +6056,153 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "annotation"
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_type_annotation"
+          },
+          "named": true,
+          "value": "annotation"
         },
         {
           "type": "STRING",
           "value": "suspend"
+        }
+      ]
+    },
+    "_type_annotation": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "@"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "use_site_target"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_annotation_constructor_invocation"
+                  },
+                  "named": true,
+                  "value": "constructor_invocation"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "user_type"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_multi_annotation"
+        }
+      ]
+    },
+    "_type_annotation_constructor_invocation": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "user_type"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_immediate_value_arguments"
+            },
+            "named": true,
+            "value": "value_arguments"
+          }
+        ]
+      }
+    },
+    "_immediate_value_arguments": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "IMMEDIATE_TOKEN",
+          "content": {
+            "type": "STRING",
+            "value": "("
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "value_argument"
+                    },
+                    {
+                      "type": "REPEAT",
+                      "content": {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": ","
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "value_argument"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ","
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },
@@ -7443,6 +7584,14 @@
       "annotation"
     ],
     [
+      "_type_annotation",
+      "annotation"
+    ],
+    [
+      "_type_annotation",
+      "_unescaped_annotation"
+    ],
+    [
       "prefix_expression",
       "when_subject"
     ],
@@ -7497,10 +7646,6 @@
     [
       "getter",
       "simple_identifier"
-    ],
-    [
-      "parameter_modifiers",
-      "_type_modifier"
     ],
     [
       "object_literal"

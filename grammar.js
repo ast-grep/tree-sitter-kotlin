@@ -106,6 +106,9 @@ module.exports = grammar({
     // _statement_annotation vs annotation (in prefix_expression and modifiers):
     // both parse @Identifier but route through different rules.
     [$._statement_annotation, $.annotation],
+    // _type_annotation vs annotation: a parameter's modifiers and its type's modifiers both start with `@`.
+    [$._type_annotation, $.annotation],
+    [$._type_annotation, $._unescaped_annotation],
     [$.prefix_expression, $.when_subject],
     [$.prefix_expression, $.value_argument],
     // ambiguity between prefix unary operators and other expression types
@@ -128,9 +131,6 @@ module.exports = grammar({
     // ambiguity between simple identifier 'set/get' with actual setter/getter functions.
     [$.setter, $.simple_identifier],
     [$.getter, $.simple_identifier],
-
-    // ambiguity between parameter modifiers in anonymous functions
-    [$.parameter_modifiers, $._type_modifier],
 
     // ambiguity for object literal
     [$.object_literal],
@@ -1232,7 +1232,32 @@ module.exports = grammar({
 
     type_modifiers: $ => repeat1($._type_modifier),
 
-    _type_modifier: $ => choice($.annotation, "suspend"),
+    _type_modifier: $ => choice(alias($._type_annotation, $.annotation), "suspend"),
+
+    // In a type, a `(` after whitespace starts the annotated type (`@Composable () -> Unit`,
+    // `@A (Int)?`) and only an immediate `(` opens the annotation's arguments, as in Kotlin's parser.
+    _type_annotation: $ => choice(
+      seq(
+        "@",
+        optional($.use_site_target),
+        choice(
+          alias($._type_annotation_constructor_invocation, $.constructor_invocation),
+          $.user_type
+        )
+      ),
+      $._multi_annotation
+    ),
+
+    _type_annotation_constructor_invocation: $ => prec(1, seq(
+      $.user_type,
+      alias($._immediate_value_arguments, $.value_arguments)
+    )),
+
+    _immediate_value_arguments: $ => seq(
+      token.immediate("("),
+      optional(seq(sep1($.value_argument, ","), optional(","))),
+      ")"
+    ),
 
     class_modifier: $ => choice(
       "sealed",
