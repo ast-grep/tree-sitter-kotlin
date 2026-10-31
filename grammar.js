@@ -387,7 +387,8 @@ module.exports = grammar({
         seq("[", repeat1($._unescaped_annotation), "]"),
         $._unescaped_annotation
       ),
-      $._semi
+      // Kotlin's parseFileAnnotationList needs no separator: `@file:JvmName("X") @file:Experimental`.
+      optional($._semi)
     ),
 
     package_header: $ => seq("package", $.identifier, $._semi),

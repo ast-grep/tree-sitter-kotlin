@@ -648,3 +648,29 @@ class S
               (simple_identifier)
               (collection_literal))))))
     (type_identifier)))
+
+================================================================================
+Two file annotations on one line
+================================================================================
+
+@file:JvmName("X") @file:Experimental
+
+package p
+
+---
+
+(source_file
+  (file_annotation
+    (constructor_invocation
+      (user_type
+        (type_identifier))
+      (value_arguments
+        (value_argument
+          (string_literal
+            (string_content))))))
+  (file_annotation
+    (user_type
+      (type_identifier)))
+  (package_header
+    (identifier
+      (simple_identifier))))
