@@ -42,7 +42,6 @@ FunctionLiterals
 
 # --- object_literal_class_body (grammar: {} parsed as trailing lambda) ---
 ObjectLiteralAsStatement
-ByClauses
 
 # --- super_expression (grammar: super<> and super@label structure) ---
 Super

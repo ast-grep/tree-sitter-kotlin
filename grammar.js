@@ -55,6 +55,110 @@ const HEX_DIGITS = token(sep1(/[0-9a-fA-F]+/, /_+/));
 const BIN_DIGITS = token(sep1(/[01]+/, /_+/));
 const REAL_EXPONENT = token(seq(/[eE]/, optional(/[+-]/), DEC_DIGITS));
 
+// The operator forms of an expression over the operand `e`. The full grammar takes `$._expression`; the delegate
+// after `by` takes `$._expression_no_trailing_lambda`, so that no operand of it takes a trailing lambda.
+const UNARY_FORMS = ($, e) => ({
+  postfix_expression: prec.left(PREC.POSTFIX, seq(e, $._postfix_unary_operator)),
+  indexing_expression: prec.left(PREC.POSTFIX, seq(e, $.indexing_suffix)),
+  navigation_expression: prec.left(PREC.POSTFIX, seq(e, $.navigation_suffix)),
+  prefix_expression: choice(
+    prec.right(PREC.PREFIX, seq($._prefix_unary_operator, e)),
+    prec.right(seq(choice($.annotation, $.label), e)),
+  ),
+  as_expression: prec.left(PREC.AS, seq(e, $._as_operator, $._type)),
+  spread_expression: prec.left(PREC.SPREAD, seq("*", e)),
+});
+
+const BINARY_FORMS = ($, e, infixName = $.simple_identifier) => ({
+  multiplicative_expression: prec.left(PREC.MULTIPLICATIVE, seq(e, $._multiplicative_operator, e)),
+  additive_expression: prec.left(PREC.ADDITIVE, seq(e, $._additive_operator, e)),
+  range_expression: prec.left(PREC.RANGE, seq(e, choice("..", "..<"), e)),
+  infix_expression: prec.left(PREC.INFIX, seq(e, infixName, e)),
+  elvis_expression: prec.left(PREC.ELVIS, seq(e, "?:", e)),
+  check_expression: prec.left(PREC.CHECK, seq(e, choice(
+    seq(optional("!"), $._in_operator, e),
+    seq(optional("!"), $._is_operator, $._type)))),
+  comparison_expression: prec.left(PREC.COMPARISON, seq(e, $._comparison_operator, e)),
+  equality_expression: prec.left(PREC.EQUALITY, seq(e, $._equality_operator, e)),
+  conjunction_expression: prec.left(PREC.CONJUNCTION, seq(e, "&&", e)),
+  disjunction_expression: prec.left(PREC.DISJUNCTION, seq(e, "||", e)),
+});
+
+// Soft keywords and modifiers that are identifiers wherever no rule takes them as keywords.
+const SOFT_KEYWORD_IDENTIFIERS = [
+  "expect",
+  "data",
+  "inner",
+  "value",
+  "actual",
+  "set",
+  "get",
+  "override",
+  "suspend",
+  "context",
+  // Batch 1: covered by existing conflict rules (class_modifier, member_modifier, function_modifier)
+  "annotation",
+  "sealed",
+  "lateinit",
+  "tailrec",
+  "operator",
+  "infix",
+  "inline",
+  "external",
+  // Batch 2: visibility modifiers
+  "public",
+  "private",
+  "internal",
+  "protected",
+  // Batch 3: inheritance modifiers
+  "abstract",
+  "final",
+  "open",
+  // Batch 4: property, parameter, reification modifiers
+  "const",
+  "vararg",
+  "noinline",
+  "crossinline",
+  "reified",
+  // Batch 5: annotation use-site targets (no conflict rules needed — disambiguated by ":")
+  "field",
+  "property",
+  "receiver",
+  "param",
+  "setparam",
+  "delegate",
+  // Batch 6: structural keywords used as identifiers
+  "companion",
+  "constructor",
+  "init",
+  "dynamic",
+  "where",
+  "catch",
+  "finally",
+  // Batch 7: enum
+  "enum",
+  // Batch 8: variance modifiers — skipped, causes new break on SoftKeywordsInTypeArguments.kt
+  // "out", "in" — too ambiguous in type parameter contexts
+];
+
+const UNARY_NAMES = [
+  'postfix_expression', 'indexing_expression', 'navigation_expression', 'prefix_expression', 'as_expression',
+  'spread_expression',
+];
+const BINARY_NAMES = [
+  'multiplicative_expression', 'additive_expression', 'range_expression', 'infix_expression', 'elvis_expression',
+  'check_expression', 'comparison_expression', 'equality_expression', 'conjunction_expression',
+  'disjunction_expression',
+];
+
+// `_<name>_no_trailing_lambda` for each form, the operands restricted to `$._expression_no_trailing_lambda`.
+function noTrailingLambdaForms(forms, names) {
+  return Object.fromEntries(names.map(name => [
+    `_${name}_no_trailing_lambda`,
+    $ => forms($, $._expression_no_trailing_lambda, alias($._delegate_infix_name, $.simple_identifier))[name],
+  ]));
+}
+
 module.exports = grammar({
   name: "kotlin",
 
@@ -153,14 +257,18 @@ module.exports = grammar({
     // parenthesized function type?
     [$.delegation_specifier, $._type],
 
-    // Ambiguity between regular expressions and the no-trailing-lambda variant
-    // used in explicit_delegation to prevent `{ }` after `by expr` being parsed
-    // as a trailing lambda instead of class_body.
-    [$._expression, $._expression_no_trailing_lambda],
-    [$._primary_expression, $._primary_expression_no_trailing_lambda],
-    // Three-way conflict: callable_reference (Foo::bar) starts with simple_identifier
-    // which both primary_expression variants can match.
-    [$._primary_expression, $._primary_expression_no_trailing_lambda, $.callable_reference],
+    // The delegate after `by` (`_expression_no_trailing_lambda`) has its own operator forms, so it no longer
+    // conflicts with `_expression`; only the ambiguities of `_expression` itself recur in it.
+    // callable_reference (Foo::bar) starts with a simple_identifier the delegate can be.
+    [$._primary_expression_no_trailing_lambda, $.callable_reference],
+    // The generics-versus-comparison ambiguities above, over the delegate's operands.
+    ...['range', 'elvis', 'check', 'additive', 'infix', 'multiplicative', 'prefix'].map(op => [
+      $.call_expression_no_trailing_lambda,
+      $._generic_call_expression_no_trailing_lambda,
+      $._navigation_expression_no_trailing_lambda,
+      $[`_${op}_expression_no_trailing_lambda`],
+      $._comparison_expression_no_trailing_lambda,
+    ]),
 
     // ambiguity between call_suffix and _generic_call_suffix (both can match type_arguments + args)
     [$.call_suffix, $._generic_call_suffix],
@@ -400,21 +508,32 @@ module.exports = grammar({
       ),
       optional($._by_delegation_hint),
       "by",
-      // Use a restricted expression that doesn't allow trailing lambda calls
-      // to avoid ambiguity with class_body in object literals.
-      // e.g., `object : Interface by delegate { }` - the `{` should be class_body, not a lambda.
-      // If a trailing lambda delegate is truly needed, use parentheses:
-      // `object : Interface by (factory { config }) { ... }`
+      // Kotlin's parser reads the delegate with trailing lambdas off (`parseCallWithClosure` of the by-clause
+      // parser), except inside parentheses, brackets or braces: `object : I by delegate { }` has a class body,
+      // and `by factory({ config })` or `by (factory { config })` passes a lambda. No operand takes one either,
+      // so `by a + b { }` ends before the body, and an operator keeps its newline rule: `by d()` followed by
+      // `companion object` on the next line ends at the newline.
       $._expression_no_trailing_lambda
     ),
 
-    // Expression variant that doesn't allow call expressions with trailing lambdas.
+    // Expression variant that doesn't allow call expressions with trailing lambdas, in any operand.
     // This is used in explicit_delegation to prevent ambiguity with class_body.
     _expression_no_trailing_lambda: $ => choice(
-      $._unary_expression,
-      $._binary_expression,
+      $._unary_expression_no_trailing_lambda,
+      $._binary_expression_no_trailing_lambda,
       $._primary_expression_no_trailing_lambda
     ),
+
+    _unary_expression_no_trailing_lambda: $ => choice(
+      ...UNARY_NAMES.map(name => alias($[`_${name}_no_trailing_lambda`], $[name]))
+    ),
+
+    _binary_expression_no_trailing_lambda: $ => choice(
+      ...BINARY_NAMES.map(name => alias($[`_${name}_no_trailing_lambda`], $[name]))
+    ),
+
+    ...noTrailingLambdaForms(UNARY_FORMS, UNARY_NAMES),
+    ...noTrailingLambdaForms(BINARY_FORMS, BINARY_NAMES),
 
     _primary_expression_no_trailing_lambda: $ => choice(
       $.parenthesized_expression,
@@ -862,7 +981,7 @@ module.exports = grammar({
       $.spread_expression
     ),
 
-    postfix_expression: $ => prec.left(PREC.POSTFIX, seq($._expression, $._postfix_unary_operator)),
+    postfix_expression: $ => UNARY_FORMS($, $._expression).postfix_expression,
 
     call_expression: $ => prec.left(PREC.POSTFIX, seq($._expression, $.call_suffix)),
 
@@ -876,18 +995,15 @@ module.exports = grammar({
       alias($._generic_call_suffix, $.call_suffix)
     ))),
 
-    indexing_expression: $ => prec.left(PREC.POSTFIX, seq($._expression, $.indexing_suffix)),
+    indexing_expression: $ => UNARY_FORMS($, $._expression).indexing_expression,
 
-    navigation_expression: $ => prec.left(PREC.POSTFIX, seq($._expression, $.navigation_suffix)),
+    navigation_expression: $ => UNARY_FORMS($, $._expression).navigation_expression,
 
-    prefix_expression: $ => choice(
-      prec.right(PREC.PREFIX, seq($._prefix_unary_operator, $._expression)),
-      prec.right(seq(choice($.annotation, $.label), $._expression)),
-    ),
+    prefix_expression: $ => UNARY_FORMS($, $._expression).prefix_expression,
 
-    as_expression: $ => prec.left(PREC.AS, seq($._expression, $._as_operator, $._type)),
+    as_expression: $ => UNARY_FORMS($, $._expression).as_expression,
 
-    spread_expression: $ => prec.left(PREC.SPREAD, seq("*", $._expression)),
+    spread_expression: $ => UNARY_FORMS($, $._expression).spread_expression,
 
     // Binary expressions
 
@@ -904,27 +1020,25 @@ module.exports = grammar({
       $.disjunction_expression
     ),
 
-    multiplicative_expression: $ => prec.left(PREC.MULTIPLICATIVE, seq($._expression, $._multiplicative_operator, $._expression)),
+    multiplicative_expression: $ => BINARY_FORMS($, $._expression).multiplicative_expression,
 
-    additive_expression: $ => prec.left(PREC.ADDITIVE, seq($._expression, $._additive_operator, $._expression)),
+    additive_expression: $ => BINARY_FORMS($, $._expression).additive_expression,
 
-    range_expression: $ => prec.left(PREC.RANGE, seq($._expression, choice("..", "..<"), $._expression)),
+    range_expression: $ => BINARY_FORMS($, $._expression).range_expression,
 
-    infix_expression: $ => prec.left(PREC.INFIX, seq($._expression, $.simple_identifier, $._expression)),
+    infix_expression: $ => BINARY_FORMS($, $._expression).infix_expression,
 
-    elvis_expression: $ => prec.left(PREC.ELVIS, seq($._expression, "?:", $._expression)),
+    elvis_expression: $ => BINARY_FORMS($, $._expression).elvis_expression,
 
-    check_expression: $ => prec.left(PREC.CHECK, seq($._expression, choice(
-      seq(optional("!"), $._in_operator, $._expression),
-      seq(optional("!"), $._is_operator, $._type)))),
+    check_expression: $ => BINARY_FORMS($, $._expression).check_expression,
 
-    comparison_expression: $ => prec.left(PREC.COMPARISON, seq($._expression, $._comparison_operator, $._expression)),
+    comparison_expression: $ => BINARY_FORMS($, $._expression).comparison_expression,
 
-    equality_expression: $ => prec.left(PREC.EQUALITY, seq($._expression, $._equality_operator, $._expression)),
+    equality_expression: $ => BINARY_FORMS($, $._expression).equality_expression,
 
-    conjunction_expression: $ => prec.left(PREC.CONJUNCTION, seq($._expression, "&&", $._expression)),
+    conjunction_expression: $ => BINARY_FORMS($, $._expression).conjunction_expression,
 
-    disjunction_expression: $ => prec.left(PREC.DISJUNCTION, seq($._expression, "||", $._expression)),
+    disjunction_expression: $ => BINARY_FORMS($, $._expression).disjunction_expression,
 
     // Suffixes
 
@@ -1514,59 +1628,16 @@ module.exports = grammar({
 
     simple_identifier: $ => choice(
       $._lexical_identifier,
-      "expect",
-      "data",
-      "inner",
-      "value",
-      "actual",
-      "set",
-      "get",
-      "override",
-      "suspend",
-      "context",
-      // Batch 1: covered by existing conflict rules (class_modifier, member_modifier, function_modifier)
-      "annotation",
-      "sealed",
-      "lateinit",
-      "tailrec",
-      "operator",
-      "infix",
-      "inline",
-      "external",
-      // Batch 2: visibility modifiers
-      "public",
-      "private",
-      "internal",
-      "protected",
-      // Batch 3: inheritance modifiers
-      "abstract",
-      "final",
-      "open",
-      // Batch 4: property, parameter, reification modifiers
-      "const",
-      "vararg",
-      "noinline",
-      "crossinline",
-      "reified",
-      // Batch 5: annotation use-site targets (no conflict rules needed — disambiguated by ":")
-      "field",
-      "property",
-      "receiver",
-      "param",
-      "setparam",
-      "delegate",
-      // Batch 6: structural keywords used as identifiers
-      "companion",
-      "constructor",
-      "init",
-      "dynamic",
-      "where",
-      "catch",
-      "finally",
-      // Batch 7: enum
-      "enum",
-      // Batch 8: variance modifiers — skipped, causes new break on SoftKeywordsInTypeArguments.kt
-      // "out", "in" — too ambiguous in type parameter contexts
+      ...SOFT_KEYWORD_IDENTIFIERS,
+    ),
+
+    // The name of an infix call inside a class delegate (`by a foo b`): a `where` after the delegate starts the
+    // type constraints instead. Kotlin ends an infix call at a newline, and the scanner inserts no semicolon
+    // before `where`, so the line break before `where T : A` is invisible here; on one line, Kotlin's
+    // `by a where T` is an infix call and a compile error.
+    _delegate_infix_name: $ => choice(
+      $._lexical_identifier,
+      ...SOFT_KEYWORD_IDENTIFIERS.filter(word => word !== "where"),
     ),
 
     identifier: $ => sep1($.simple_identifier, "."),
