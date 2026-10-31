@@ -1608,3 +1608,59 @@ class A {
               (directly_assignable_expression
                 (simple_identifier))
               (simple_identifier))))))))
+
+================================================================================
+Annotated supertype
+================================================================================
+
+class A(val x: Int) : @Suppress("X") B {
+}
+class C : D(), E,
+    @Suppress("T") F
+
+---
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (binding_pattern_kind)
+        (simple_identifier)
+        (user_type
+          (type_identifier))))
+    (delegation_specifier
+      (type_modifiers
+        (annotation
+          (constructor_invocation
+            (user_type
+              (type_identifier))
+            (value_arguments
+              (value_argument
+                (string_literal
+                  (string_content)))))))
+      (user_type
+        (type_identifier)))
+    (class_body))
+  (class_declaration
+    (type_identifier)
+    (delegation_specifier
+      (constructor_invocation
+        (user_type
+          (type_identifier))
+        (value_arguments)))
+    (delegation_specifier
+      (user_type
+        (type_identifier)))
+    (delegation_specifier
+      (type_modifiers
+        (annotation
+          (constructor_invocation
+            (user_type
+              (type_identifier))
+            (value_arguments
+              (value_argument
+                (string_literal
+                  (string_content)))))))
+      (user_type
+        (type_identifier)))))

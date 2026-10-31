@@ -499,7 +499,13 @@ module.exports = grammar({
       // The grammar doesn't explicitly define it, but parenthesized function
       // types seem to work!
       seq('(', $.function_type, ')'),
-      seq("suspend", $.function_type)
+      seq("suspend", $.function_type),
+      // An annotated supertype (Kotlin's annotatedDelegationSpecifier): `: @Suppress("X") Base`.
+      // The precedence takes `@A Base {` as this rather than the receiver of a function type.
+      prec(2, seq(
+        $.type_modifiers,
+        choice($.constructor_invocation, $.explicit_delegation, $.user_type)
+      ))
     )),
 
     constructor_invocation: $ => seq($.user_type, optional($._paren_hint), $.value_arguments),

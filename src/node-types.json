@@ -2471,7 +2471,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
@@ -2484,6 +2484,10 @@
         },
         {
           "type": "function_type",
+          "named": true
+        },
+        {
+          "type": "type_modifiers",
           "named": true
         },
         {

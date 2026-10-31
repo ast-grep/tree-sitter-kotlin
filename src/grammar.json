@@ -886,6 +886,36 @@
                 "name": "function_type"
               }
             ]
+          },
+          {
+            "type": "PREC",
+            "value": 2,
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "type_modifiers"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "constructor_invocation"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "explicit_delegation"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "user_type"
+                    }
+                  ]
+                }
+              ]
+            }
           }
         ]
       }
