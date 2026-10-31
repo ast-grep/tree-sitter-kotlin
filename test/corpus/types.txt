@@ -530,3 +530,98 @@ fun f(
         (user_type
           (type_identifier))))
     (function_body)))
+
+================================================================================
+Function types with context parameters
+================================================================================
+
+val f: context(A, B) () -> Unit = TODO()
+fun <T> analyze(action: context(KaSession) (KtFile) -> T): T = TODO()
+val g: (suspend context(A) B.(C) -> D)? = null
+typealias Handler = @Ann context(T<X>) T.() -> Unit
+
+---
+
+(source_file
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier)
+      (function_type
+        (context_parameters
+          (user_type
+            (type_identifier))
+          (user_type
+            (type_identifier)))
+        (function_type_parameters)
+        (user_type
+          (type_identifier))))
+    (call_expression
+      (simple_identifier)
+      (call_suffix
+        (value_arguments))))
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (simple_identifier)
+    (function_value_parameters
+      (parameter
+        (simple_identifier)
+        (function_type
+          (context_parameters
+            (user_type
+              (type_identifier)))
+          (function_type_parameters
+            (user_type
+              (type_identifier)))
+          (user_type
+            (type_identifier)))))
+    (user_type
+      (type_identifier))
+    (function_body
+      (call_expression
+        (simple_identifier)
+        (call_suffix
+          (value_arguments)))))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier)
+      (nullable_type
+        (parenthesized_type
+          (type_modifiers)
+          (function_type
+            (context_parameters
+              (user_type
+                (type_identifier)))
+            receiver: (receiver_type
+              (user_type
+                (type_identifier)))
+            (function_type_parameters
+              (user_type
+                (type_identifier)))
+            (user_type
+              (type_identifier))))
+        (quest)))
+    (null_literal))
+  (type_alias
+    (type_identifier)
+    (type_modifiers
+      (annotation
+        (user_type
+          (type_identifier))))
+    (function_type
+      (context_parameters
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier))))))
+      receiver: (receiver_type
+        (user_type
+          (type_identifier)))
+      (function_type_parameters)
+      (user_type
+        (type_identifier)))))

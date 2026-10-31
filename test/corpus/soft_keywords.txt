@@ -180,3 +180,88 @@ fun foo() {
         (additive_expression
           (simple_identifier)
           (integer_literal))))))
+
+================================================================================
+context as an identifier and as a function call
+================================================================================
+
+fun context() {}
+
+fun f() {
+    context.alter(1)
+    val context = Context()
+    use(context)
+    context = other
+    context(null) { check() }
+    context(a, b) {
+        run()
+    }
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (call_expression
+          (navigation_expression
+            (simple_identifier)
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (integer_literal)))))
+        (property_declaration
+          (binding_pattern_kind)
+          (variable_declaration
+            (simple_identifier))
+          (call_expression
+            (simple_identifier)
+            (call_suffix
+              (value_arguments))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (simple_identifier)))))
+        (assignment
+          (directly_assignable_expression
+            (simple_identifier))
+          (simple_identifier))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (null_literal)))
+            (annotated_lambda
+              (lambda_literal
+                (statements
+                  (call_expression
+                    (simple_identifier)
+                    (call_suffix
+                      (value_arguments))))))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (simple_identifier))
+              (value_argument
+                (simple_identifier)))
+            (annotated_lambda
+              (lambda_literal
+                (statements
+                  (call_expression
+                    (simple_identifier)
+                    (call_suffix
+                      (value_arguments))))))))))))

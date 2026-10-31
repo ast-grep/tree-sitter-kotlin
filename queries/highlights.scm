@@ -248,6 +248,7 @@
 ;;; Keywords
 
 (type_alias "typealias" @keyword)
+(context_parameters "context" @keyword)
 [
 	(class_modifier)
 	(member_modifier)

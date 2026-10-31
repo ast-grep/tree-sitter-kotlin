@@ -67,6 +67,7 @@ const TS_TO_PSI = {
   type_constraints: 'TYPE_CONSTRAINT_LIST',
   type_constraint: 'TYPE_CONSTRAINT',
   receiver_type: 'FUNCTION_TYPE_RECEIVER',
+  context_parameters: 'CONTEXT_PARAMETER_LIST',
 
   // Delegation
   delegation_specifier: null,
@@ -306,9 +307,8 @@ const SKIP_PSI_NODES = new Set([
   // CLASS_LITERAL_EXPRESSION — tree-sitter handles ::class differently
   'CLASS_LITERAL_EXPRESSION',
 
-  // CONTEXT_RECEIVER, CONTEXT_PARAMETER_LIST — newer Kotlin features
+  // CONTEXT_RECEIVER — tree-sitter puts a context receiver's type directly in context_parameters
   'CONTEXT_RECEIVER',
-  'CONTEXT_PARAMETER_LIST',
 
   // INTERSECTION_TYPE — newer Kotlin type features
   'INTERSECTION_TYPE',
@@ -362,6 +362,7 @@ const ALL_TS_NAMED_NODES = new Set([
   'conjunction_expression',
   'constructor_delegation_call',
   'constructor_invocation',
+  'context_parameters',
   'control_structure_body',
   'delegation_specifier',
   'directly_assignable_expression',

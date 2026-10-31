@@ -365,3 +365,201 @@ Function block with trailing comma
       (additive_expression
         (integer_literal)
         (simple_identifier)))))
+
+================================================================================
+Context parameters before a function
+================================================================================
+
+context(_: KaSession)
+fun foo() {}
+
+context(
+    server: LSServer,
+    configuration: LSConfiguration,
+)
+private fun bar(): Int = 1
+
+---
+
+(source_file
+  (function_declaration
+    (modifiers
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier)))))
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (function_declaration
+    (modifiers
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier))))
+      (visibility_modifier))
+    (simple_identifier)
+    (function_value_parameters)
+    (user_type
+      (type_identifier))
+    (function_body
+      (integer_literal))))
+
+================================================================================
+Context receivers before a function
+================================================================================
+
+context(Scope, Comparator<T>)
+fun <T> T.max(other: T): T = this
+
+---
+
+(source_file
+  (function_declaration
+    (modifiers
+      (context_parameters
+        (user_type
+          (type_identifier))
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier)))))))
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    receiver: (receiver_type
+      (user_type
+        (type_identifier)))
+    (simple_identifier)
+    (function_value_parameters
+      (parameter
+        (simple_identifier)
+        (user_type
+          (type_identifier))))
+    (user_type
+      (type_identifier))
+    (function_body
+      (this_expression))))
+
+================================================================================
+Context parameters among annotations and modifiers
+================================================================================
+
+@Ann
+context(a: A)
+override suspend fun f() {}
+
+context(x: X) inline @Ann context(y: Y) public fun g() {}
+
+---
+
+(source_file
+  (function_declaration
+    (modifiers
+      (annotation
+        (user_type
+          (type_identifier)))
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier))))
+      (member_modifier)
+      (function_modifier))
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (function_declaration
+    (modifiers
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier))))
+      (function_modifier)
+      (annotation
+        (user_type
+          (type_identifier)))
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier))))
+      (visibility_modifier))
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body)))
+
+================================================================================
+Context parameters on an extension property
+================================================================================
+
+context(s: KaSession)
+val KtElement.symbolName: String get() = ""
+
+---
+
+(source_file
+  (property_declaration
+    (modifiers
+      (context_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier)))))
+    (binding_pattern_kind)
+    receiver: (receiver_type
+      (user_type
+        (type_identifier)))
+    (variable_declaration
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (getter
+      (function_body
+        (string_literal)))))
+
+================================================================================
+Context parameters on a local function
+================================================================================
+
+fun outer() {
+    context(a: A, @Ann vararg b: B)
+    fun local() {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (function_declaration
+          (modifiers
+            (context_parameters
+              (parameter
+                (simple_identifier)
+                (user_type
+                  (type_identifier)))
+              (parameter_modifiers
+                (annotation
+                  (user_type
+                    (type_identifier)))
+                (parameter_modifier))
+              (parameter
+                (simple_identifier)
+                (user_type
+                  (type_identifier)))))
+          (simple_identifier)
+          (function_value_parameters)
+          (function_body))))))

@@ -85,6 +85,8 @@ module.exports = grammar({
     [$.property_modifier, $.simple_identifier],
     // parameter modifiers as identifiers
     [$.parameter_modifier, $.simple_identifier],
+    // `context(` starts context parameters or calls a function named `context`
+    [$.context_parameters, $.simple_identifier],
     [$.parameter_modifiers],
     [$.type_parameter_modifiers],
 
@@ -702,6 +704,7 @@ module.exports = grammar({
     _type_projection_modifier: $ => $.variance_modifier,
 
     function_type: $ => seq(
+      optional($.context_parameters),
       optional(seq(field("receiver", $.receiver_type), ".")),
       $.function_type_parameters,
       "->",
@@ -1220,7 +1223,24 @@ module.exports = grammar({
     // ==========
 
     modifiers: $ => prec.right(
-      repeat1(prec.right(PREC.MODIFIERS, choice($.annotation, $._modifier)))
+      repeat1(prec.right(PREC.MODIFIERS, choice($.annotation, $.context_parameters, $._modifier)))
+    ),
+
+    // Kotlin's context parameters (`context(scope: Scope)`) and the deprecated context receivers
+    // (`context(Scope)`) share one list, CONTEXT_PARAMETER_LIST in Kotlin's parser: among a
+    // declaration's modifiers, in any order with annotations and other modifiers, and before a
+    // function type. A named entry is a `parameter`, a context receiver is its bare type.
+    context_parameters: $ => seq(
+      "context",
+      "(",
+      sep1($._context_parameter, ","),
+      optional(","),
+      ")"
+    ),
+
+    _context_parameter: $ => choice(
+      seq(optional($.parameter_modifiers), $.parameter),
+      $._type
     ),
 
     parameter_modifiers: $ => repeat1(choice($.annotation, $.parameter_modifier)),
@@ -1376,6 +1396,7 @@ module.exports = grammar({
       "get",
       "override",
       "suspend",
+      "context",
       // Batch 1: covered by existing conflict rules (class_modifier, member_modifier, function_modifier)
       "annotation",
       "sealed",
