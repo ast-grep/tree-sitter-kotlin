@@ -104,7 +104,7 @@ module.exports = grammar({
     [$.type_arguments, $._comparison_operator],
 
     // ambiguity between prefix expressions and annotations before functions
-    [$._statement, $.prefix_expression],
+    [$._expression_statement, $.prefix_expression],
     // _statement_annotation vs annotation (in prefix_expression and modifiers):
     // both parse @Identifier but route through different rules.
     [$._statement_annotation, $.annotation],
@@ -127,7 +127,6 @@ module.exports = grammar({
     [$.delegation_specifier, $._type_modifier, $.simple_identifier],
     [$.anonymous_function, $.function_modifier],
     [$.anonymous_function, $.simple_identifier],
-    [$.anonymous_function, $.function_modifier, $.simple_identifier],
 
 
     // ambiguity between simple identifier 'set/get' with actual setter/getter functions.
@@ -137,7 +136,6 @@ module.exports = grammar({
     // ambiguity for object literal
     [$.object_literal],
     [$.object_literal, $.class_modifier],
-    [$.object_literal, $.class_modifier, $.simple_identifier],
     [$.object_literal, $.simple_identifier],
     [$.object_literal, $.object_declaration],
 
@@ -193,6 +191,7 @@ module.exports = grammar({
     // Never produced: valid exactly where an `if` may take its `else`, so the scanner can tell
     // an if's `else` on the next line from a when entry `else if guard ->`.
     $._else_hint,
+    $._modifier_hint,
   ],
 
   extras: $ => [
@@ -751,13 +750,15 @@ module.exports = grammar({
 
     _statement: $ => choice(
       $._declaration,
-      seq(
-        repeat(choice($.label, alias($._statement_annotation, $.annotation))),
-        choice(
-          $.assignment,
-          $._loop_statement,
-          $._expression
-        )
+      $._expression_statement
+    ),
+
+    _expression_statement: $ => seq(
+      repeat(choice($.label, alias($._statement_annotation, $.annotation))),
+      choice(
+        $.assignment,
+        $._loop_statement,
+        $._expression
       )
     ),
 
@@ -780,7 +781,11 @@ module.exports = grammar({
       "@"
     )),
 
-    control_structure_body: $ => choice($._block, $._statement),
+    // The body of an `if`, `else`, loop or `when` entry is an expression in Kotlin's parser, so a modifier word
+    // there is an identifier: `else`, then `value` alone on a line, then `val next = 1` ends the branch at
+    // `value`. A body holds no declaration here, so that no modifier list can start in it; Kotlin parses a
+    // keyword-led one (`if (c) val x = 1`) and rejects it, and none occurs in the IntelliJ monorepo.
+    control_structure_body: $ => choice($._block, $._expression_statement),
 
     _block: $ => prec(PREC.BLOCK, seq("{", optional($.statements), "}")),
 
@@ -1335,8 +1340,17 @@ module.exports = grammar({
     // Modifiers
     // ==========
 
+    // Kotlin's parser reads a statement as a declaration first: it takes every modifier word and annotation,
+    // across line breaks, and keeps them when a declaration keyword follows (`parseLocalDeclaration`), so
+    // `private` alone on a line before `fun x()` is a modifier, not an expression statement.
     modifiers: $ => prec.right(
-      repeat1(prec.right(PREC.MODIFIERS, choice($.annotation, $.context_parameters, $._modifier)))
+      repeat1(prec.right(PREC.MODIFIERS, choice(
+        $.annotation,
+        $.context_parameters,
+        // Never emitted: it puts MODIFIER_HINT among the scanner's valid symbols after a modifier word, so
+        // that a line break before the declaration keyword inserts no semicolon (`declaration_follows`).
+        seq($._modifier, optional($._modifier_hint))
+      )))
     ),
 
     // Kotlin's context parameters (`context(scope: Scope)`) and the deprecated context receivers

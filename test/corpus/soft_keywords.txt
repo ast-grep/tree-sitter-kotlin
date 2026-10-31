@@ -265,3 +265,172 @@ fun f() {
                     (simple_identifier)
                     (call_suffix
                       (value_arguments))))))))))))
+
+================================================================================
+Modifiers on their own lines before a top-level declaration
+================================================================================
+
+private
+fun x() {}
+
+@A
+private
+suspend
+fun f() {}
+
+internal
+data
+class D(val a: Int)
+
+public
+val v = 1
+
+---
+
+(source_file
+  (function_declaration
+    (modifiers
+      (visibility_modifier))
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (function_declaration
+    (modifiers
+      (annotation
+        (user_type
+          (type_identifier)))
+      (visibility_modifier)
+      (function_modifier))
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body))
+  (class_declaration
+    (modifiers
+      (visibility_modifier)
+      (class_modifier))
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (binding_pattern_kind)
+        (simple_identifier)
+        (user_type
+          (type_identifier)))))
+  (property_declaration
+    (modifiers
+      (visibility_modifier))
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (integer_literal)))
+
+================================================================================
+Modifier words on their own lines before a local function
+================================================================================
+
+fun h() {
+    open
+    private
+    fun local() {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (function_declaration
+          (modifiers
+            (inheritance_modifier)
+            (visibility_modifier))
+          (simple_identifier)
+          (function_value_parameters)
+          (function_body))))))
+
+================================================================================
+A modifier word as an expression statement before a call
+================================================================================
+
+fun h() {
+    val open = 1
+    open
+    foo()
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (property_declaration
+          (binding_pattern_kind)
+          (variable_declaration
+            (simple_identifier))
+          (integer_literal))
+        (simple_identifier)
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments)))))))
+
+================================================================================
+A modifier word as an if branch, and a call named set as one
+================================================================================
+
+fun h(name: String?) {
+    val text = if (name != null)
+        name
+    else
+        value
+
+    val next = 1
+    if (a == b) set(a)
+}
+
+---
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters
+      (parameter
+        (simple_identifier)
+        (nullable_type
+          (user_type
+            (type_identifier))
+          (quest))))
+    (function_body
+      (statements
+        (property_declaration
+          (binding_pattern_kind)
+          (variable_declaration
+            (simple_identifier))
+          (if_expression
+            condition: (equality_expression
+              (simple_identifier)
+              (null_literal))
+            consequence: (control_structure_body
+              (simple_identifier))
+            alternative: (control_structure_body
+              (simple_identifier))))
+        (property_declaration
+          (binding_pattern_kind)
+          (variable_declaration
+            (simple_identifier))
+          (integer_literal))
+        (if_expression
+          condition: (equality_expression
+            (simple_identifier)
+            (simple_identifier))
+          consequence: (control_structure_body
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments
+                  (value_argument
+                    (simple_identifier)))))))))))

@@ -19,6 +19,7 @@ enum TokenType {
   BY_DELEGATION_HINT,
   BRACE_HINT,
   ELSE_HINT,
+  MODIFIER_HINT,
 };
 
 /* Pretty much all of this code is taken from the Julia tree-sitter
@@ -492,6 +493,72 @@ static bool colon_or_arrow_continues(TSLexer *lexer) {
   return first == ':' ? lexer->lookahead != ':' : lexer->lookahead == '>';
 }
 
+// Words Kotlin reads as modifiers in a declaration's modifier list (KtTokens.MODIFIER_KEYWORDS, without the
+// hard keywords `in` and `fun`, which the parser takes as keywords anyway).
+static const char *const MODIFIER_WORDS[] = {
+  "abstract", "actual", "annotation", "companion", "const", "crossinline", "data", "enum", "expect",
+  "external", "final", "infix", "inline", "inner", "internal", "lateinit", "noinline", "open", "operator",
+  "out", "override", "private", "protected", "public", "reified", "sealed", "suspend", "tailrec", "vararg",
+  "value",
+};
+
+// Keywords that start the declaration a modifier list belongs to.
+static const char *const DECLARATION_WORDS[] = {
+  "class", "constructor", "fun", "interface", "object", "typealias", "val", "var",
+};
+
+static bool word_in(const char *word, const char *const *words, unsigned count) {
+  for (unsigned i = 0; i < count; i++) {
+    if (strcmp(word, words[i]) == 0) return true;
+  }
+  return false;
+}
+
+// Reads an identifier-like word into `word`; 0 when there is none or it is too long for a keyword.
+static unsigned read_word(TSLexer *lexer, char *word, unsigned size) {
+  unsigned len = 0;
+  while (is_word_char(lexer->lookahead)) {
+    if (len + 1 >= size) return 0;
+    word[len++] = (char)lexer->lookahead;
+    skip(lexer);
+  }
+  word[len] = '\0';
+  return len;
+}
+
+#define WORD_IN(word, words) word_in(word, words, sizeof(words) / sizeof(words[0]))
+
+// A line break after a modifier word (MODIFIER_HINT is valid), at the first character of the next
+// line's token, a letter or `@`: does a semicolon go at the line break? Kotlin's parser reads a
+// statement as a declaration first, takes every modifier word and annotation across line breaks,
+// and keeps them when a declaration keyword follows (`parseLocalDeclaration`), so `private` alone on
+// a line before `fun x()` is a modifier and no semicolon ends it. Otherwise the modifier word was an
+// expression statement. A word that is neither gets the decisions of the switch in
+// scan_automatic_semicolon, which cannot read it again.
+static bool semicolon_after_modifier_line(TSLexer *lexer, const bool *valid_symbols) {
+  char word[16];
+  bool after_modifier = false;
+  for (;;) {
+    if (lexer->lookahead == '@') return false;
+    unsigned len = read_word(lexer, word, sizeof(word));
+    if (len == 0) return true;
+    if (WORD_IN(word, DECLARATION_WORDS)) return false;
+    if (!WORD_IN(word, MODIFIER_WORDS)) break;
+    after_modifier = true;
+    while (iswspace(lexer->lookahead)) skip(lexer);
+  }
+  if (after_modifier) return true;
+  if (strcmp(word, "by") == 0) return !valid_symbols[BY_DELEGATION_HINT];
+  if (strcmp(word, "else") == 0) return !else_continues(lexer, valid_symbols);
+  if (strcmp(word, "as") == 0 || strcmp(word, "where") == 0) return false;
+  bool is_catch = strcmp(word, "catch") == 0;
+  if (is_catch || strcmp(word, "finally") == 0) {
+    while (iswspace(lexer->lookahead)) skip(lexer);
+    return lexer->lookahead != (is_catch ? '(' : '{');
+  }
+  return true;
+}
+
 // Sets *consumed_token when it returns false after reading into the next token (a word such as
 // `else`, an annotation, `!`): the caller must not lex another token from that position.
 static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
@@ -601,6 +668,13 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
   *consumed_token = skipped_comment || iswalpha(lexer->lookahead) || lexer->lookahead == '@' ||
                     lexer->lookahead == '!' || lexer->lookahead == ':' ||
                     lexer->lookahead == '-';
+
+  // A primary constructor's modifiers (`class C private` with `constructor(...)` on the next line)
+  // are the PRIMARY_CONSTRUCTOR_KEYWORD cases of the switch.
+  if (valid_symbols[MODIFIER_HINT] && !valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] &&
+      (iswalpha(lexer->lookahead) || lexer->lookahead == '@')) {
+    return semicolon_after_modifier_line(lexer, valid_symbols);
+  }
 
   switch (lexer->lookahead) {
       case ',':
