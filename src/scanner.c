@@ -17,6 +17,7 @@ enum TokenType {
   INTERPOLATION_EXPRESSION_START,
   INTERPOLATION_IDENTIFIER_START,
   BY_DELEGATION_HINT,
+  BRACE_HINT,
 };
 
 /* Pretty much all of this code is taken from the Julia tree-sitter
@@ -463,13 +464,21 @@ static bool check_annotation_then_constructor(TSLexer *lexer) {
   return check_word(lexer, "constructor", 11);
 }
 
-// Kotlin ends a postfix expression at a newline before '(' (KotlinExpressionParsing
-// interruptedWithNewLine): `foo()\n(bar as Baz).x = 1` is two statements. A class
-// name is the exception: `class A\n(val x: Int)` continues with the primary
-// constructor, and the parser expects PRIMARY_CONSTRUCTOR_KEYWORD exactly there.
-// valid_symbols[STRING_CONTENT] guards against error recovery, where all are valid.
-static inline bool newline_paren_continues(const bool *valid_symbols) {
-  return valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] && !valid_symbols[STRING_CONTENT];
+// Kotlin ends a postfix expression at a newline before '(', '[' or '{'
+// (KotlinExpressionParsing.interruptedWithNewLine): `foo()\n(bar as Baz).x = 1` and
+// `list.map\n{ ... }` are two statements each. The exceptions: in `class A\n(val x: Int)` the
+// parser expects PRIMARY_CONSTRUCTOR_KEYWORD; and a `{` still attaches as a trailing lambda
+// after a call's arguments (`foo(x)\n{ }`, parseCallSuffix parses closures without a newline
+// check) and as the optional body of a declaration (`fun f()\n{`, `class A\n{`), where the
+// parser expects BRACE_HINT, a token that is never produced. valid_symbols[STRING_CONTENT]
+// guards against error recovery, where all symbols are valid.
+static bool newline_bracket_continues(int32_t bracket, const bool *valid_symbols) {
+  if (valid_symbols[STRING_CONTENT]) return false;
+  switch (bracket) {
+    case '(': return valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD];
+    case '{': return valid_symbols[BRACE_HINT];
+    default: return false;
+  }
 }
 
 static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) {
@@ -537,15 +546,15 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) 
       case '>':
       case '<':
       case '=':
-      case '{':
-      case '[':
       case '?':
       case '|':
       case '&':
         return false;
 
       case '(':
-        return !newline_paren_continues(valid_symbols);
+      case '[':
+      case '{':
+        return !newline_bracket_continues(lexer->lookahead, valid_symbols);
 
       // Handle `/` — could be division, line comment, or block comment.
       // For division: no ASI (continuation operator).
@@ -572,11 +581,11 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) 
           // Now check the next real token.
           switch (lexer->lookahead) {
             case '.': case ',': case ':': case '*': case '%':
-            case '>': case '<': case '=': case '{': case '[':
+            case '>': case '<': case '=':
             case '?': case '|': case '&': case '/':
               return false;
-            case '(':
-              return !newline_paren_continues(valid_symbols);
+            case '(': case '[': case '{':
+              return !newline_bracket_continues(lexer->lookahead, valid_symbols);
             case '!':
               skip(lexer);
               if (lexer->lookahead == '=') return false;
@@ -661,13 +670,13 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols) 
           // after, the MULTILINE_COMMENT span would swallow the keyword
           // and the parser would never see it.
           switch (lexer->lookahead) {
-            case '(':
-              if (!newline_paren_continues(valid_symbols)) return true;
+            case '(': case '[': case '{':
+              if (!newline_bracket_continues(lexer->lookahead, valid_symbols)) return true;
               lexer->mark_end(lexer);
               lexer->result_symbol = MULTILINE_COMMENT;
               return true;
             case '.': case ',': case ':': case '%':
-            case '>': case '<': case '=': case '{': case '[':
+            case '>': case '<': case '=':
             case '?': case '|': case '&': case '/':
             case '*':
               // Continuation operator — produce MULTILINE_COMMENT.

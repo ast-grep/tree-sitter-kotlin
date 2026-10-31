@@ -186,6 +186,10 @@ module.exports = grammar({
     $._interpolation_expression_start,
     $._interpolation_identifier_start,
     $._by_delegation_hint,
+    // Never produced: valid exactly where a `{` on the next line still belongs to the
+    // construct before it, a declaration's optional body or the trailing lambda after a call's
+    // arguments, so the scanner inserts no semicolon there (see newline_bracket_continues).
+    $._brace_hint,
   ],
 
   extras: $ => [
@@ -320,7 +324,7 @@ module.exports = grammar({
         optional($.primary_constructor),
         optional(seq(":", $._delegation_specifiers)),
         optional($.type_constraints),
-        optional($.class_body)
+        optional(seq(optional($._brace_hint), $.class_body))
       ),
       seq(
         optional($.modifiers),
@@ -330,7 +334,7 @@ module.exports = grammar({
         optional($.primary_constructor),
         optional(seq(":", $._delegation_specifiers)),
         optional($.type_constraints),
-        optional($.enum_class_body)
+        optional(seq(optional($._brace_hint), $.enum_class_body))
       )
     )),
 
@@ -495,7 +499,7 @@ module.exports = grammar({
       "object",
       optional(alias($.simple_identifier, $.type_identifier)),
       optional(seq(":", $._delegation_specifiers)),
-      optional($.class_body)
+      optional(seq(optional($._brace_hint), $.class_body))
     ),
 
     function_value_parameters: $ => seq(
@@ -529,7 +533,7 @@ module.exports = grammar({
       $.function_value_parameters,
       optional(seq(":", $._type)),
       optional($.type_constraints),
-      optional($.function_body)
+      optional(seq(optional($._brace_hint), $.function_body))
     )),
 
     function_body: $ => choice($._block, seq("=", $._expression)),
@@ -621,7 +625,7 @@ module.exports = grammar({
       "object",
       alias($.simple_identifier, $.type_identifier),
       optional(seq(":", $._delegation_specifiers)),
-      optional($.class_body)
+      optional(seq(optional($._brace_hint), $.class_body))
     )),
 
     secondary_constructor: $ => seq(
@@ -629,7 +633,7 @@ module.exports = grammar({
       "constructor",
       $.function_value_parameters,
       optional(seq(":", $.constructor_delegation_call)),
-      optional($._block)
+      optional(seq(optional($._brace_hint), $._block))
     ),
 
     constructor_delegation_call: $ => seq(choice("this", "super"), $.value_arguments),
@@ -791,7 +795,7 @@ module.exports = grammar({
       "in",
       $._expression,
       ")",
-      optional($.control_structure_body)
+      optional(seq(optional($._brace_hint), $.control_structure_body))
     )),
 
     while_statement: $ => seq(
@@ -804,7 +808,7 @@ module.exports = grammar({
 
     do_while_statement: $ => prec.right(seq(
       "do",
-      optional($.control_structure_body),
+      optional(seq(optional($._brace_hint), $.control_structure_body)),
       "while",
       "(",
       $._expression,
@@ -925,7 +929,10 @@ module.exports = grammar({
       // this introduces ambiguities with 'less than' for comparisons
       optional($.type_arguments),
       choice(
-        prec(PREC.ARGUMENTS, seq(optional($.value_arguments), $.annotated_lambda)),
+        prec(PREC.ARGUMENTS, seq(
+          optional(seq($.value_arguments, optional($._brace_hint))),
+          $.annotated_lambda
+        )),
         $.value_arguments
       )
     )),
@@ -934,7 +941,11 @@ module.exports = grammar({
     _generic_call_suffix: $ => prec.left(seq(
       $.type_arguments,
       choice(
-        prec(PREC.ARGUMENTS, seq(optional($.value_arguments), $.annotated_lambda)),
+        prec(PREC.ARGUMENTS, seq(
+          optional($._brace_hint),
+          optional(seq($.value_arguments, optional($._brace_hint))),
+          $.annotated_lambda
+        )),
         $.value_arguments
       )
     )),
@@ -1114,7 +1125,7 @@ module.exports = grammar({
       optional(seq(sep1($._simple_user_type, "."), ".")), // TODO
       alias($._anonymous_function_value_parameters, $.function_value_parameters),
       optional(seq(":", $._type)),
-      optional($.function_body)
+      optional(seq(optional($._brace_hint), $.function_body))
     )),
 
     // An anonymous function may leave its parameter types out, `fun(a, b): T { }`
@@ -1144,6 +1155,7 @@ module.exports = grammar({
         optional("data"),
         "object",
         optional(seq(":", $._delegation_specifiers)),
+        optional($._brace_hint),
         $.class_body,
       )),
       seq(
