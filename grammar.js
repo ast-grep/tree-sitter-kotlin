@@ -1205,7 +1205,8 @@ module.exports = grammar({
         seq($.when_condition, repeat1(seq(",", $.when_condition)), optional(",")),
         // optional guard condition and optional trailing comma
         seq($.when_condition, optional($.guard_condition), optional(",")),
-        "else"
+        // `else if cond ->`: Kotlin 2.2 lets the else branch take a guard as well
+        seq("else", optional($.guard_condition))
       ),
       "->",
       $.control_structure_body,

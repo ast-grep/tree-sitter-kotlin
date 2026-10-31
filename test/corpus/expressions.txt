@@ -1686,3 +1686,95 @@ when (animal) {
           (simple_identifier)
           (call_suffix
             (value_arguments)))))))
+
+================================================================================
+When expression with guard condition on the else branch
+================================================================================
+
+when (state) {
+    null -> LoggedOut
+    else if state.isLoggedIn -> LoggedIn(state.email)
+    else if state.expired && !state.renewable || force -> Expired
+    else -> Unknown
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (when_expression
+    (when_subject
+      (simple_identifier))
+    (when_entry
+      (when_condition
+        (null_literal))
+      (control_structure_body
+        (simple_identifier)))
+    (when_entry
+      (guard_condition
+        (navigation_expression
+          (simple_identifier)
+          (navigation_suffix
+            (simple_identifier))))
+      (control_structure_body
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (navigation_expression
+                  (simple_identifier)
+                  (navigation_suffix
+                    (simple_identifier)))))))))
+    (when_entry
+      (guard_condition
+        (disjunction_expression
+          (conjunction_expression
+            (navigation_expression
+              (simple_identifier)
+              (navigation_suffix
+                (simple_identifier)))
+            (prefix_expression
+              (navigation_expression
+                (simple_identifier)
+                (navigation_suffix
+                  (simple_identifier)))))
+          (simple_identifier)))
+      (control_structure_body
+        (simple_identifier)))
+    (when_entry
+      (control_structure_body
+        (simple_identifier)))))
+
+================================================================================
+When entry whose body is an if expression
+================================================================================
+
+when (x) {
+    0 -> if (a) b else c
+    else -> if (a) b else c
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (when_expression
+    (when_subject
+      (simple_identifier))
+    (when_entry
+      (when_condition
+        (integer_literal))
+      (control_structure_body
+        (if_expression
+          condition: (simple_identifier)
+          consequence: (control_structure_body
+            (simple_identifier))
+          alternative: (control_structure_body
+            (simple_identifier)))))
+    (when_entry
+      (control_structure_body
+        (if_expression
+          condition: (simple_identifier)
+          consequence: (control_structure_body
+            (simple_identifier))
+          alternative: (control_structure_body
+            (simple_identifier)))))))
