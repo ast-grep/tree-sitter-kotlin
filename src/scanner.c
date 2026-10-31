@@ -19,6 +19,7 @@ enum TokenType {
   BY_DELEGATION_HINT,
   BRACE_HINT,
   ELSE_HINT,
+  PAREN_HINT,
   MODIFIER_HINT,
 };
 
@@ -452,8 +453,11 @@ static bool check_annotation_then_constructor(TSLexer *lexer) {
 
 // Kotlin ends a postfix expression at a newline before '(', '[' or '{'
 // (KotlinExpressionParsing.interruptedWithNewLine): `foo()\n(bar as Baz).x = 1` and
-// `list.map\n{ ... }` are two statements each. The exceptions: in `class A\n(val x: Int)` the
-// parser expects PRIMARY_CONSTRUCTOR_KEYWORD; and a `{` still attaches as a trailing lambda
+// `list.map\n{ ... }` are two statements each. The exceptions: a `(` still opens the primary
+// constructor in `class A\n(val x: Int)`, where the parser expects PRIMARY_CONSTRUCTOR_KEYWORD,
+// and the arguments of a supertype (`: Base<T>\n(x)`, parseDelegationSpecifier), an annotation
+// (parseAnnotation), an enum entry, or an accessor's parameters, where it expects PAREN_HINT;
+// a `{` still attaches as a trailing lambda
 // after a call's arguments (`foo(x)\n{ }`, parseCallSuffix parses closures without a newline
 // check) and as the optional body of a declaration (`fun f()\n{`, `class A\n{`), where the
 // parser expects BRACE_HINT, a token that is never produced. valid_symbols[STRING_CONTENT]
@@ -461,7 +465,7 @@ static bool check_annotation_then_constructor(TSLexer *lexer) {
 static bool newline_bracket_continues(int32_t bracket, const bool *valid_symbols) {
   if (valid_symbols[STRING_CONTENT]) return false;
   switch (bracket) {
-    case '(': return valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD];
+    case '(': return valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] || valid_symbols[PAREN_HINT];
     case '{': return valid_symbols[BRACE_HINT];
     default: return false;
   }

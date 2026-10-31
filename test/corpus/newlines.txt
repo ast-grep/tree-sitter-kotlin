@@ -918,3 +918,178 @@ fun f() {
                   (simple_identifier))))
             (control_structure_body
               (simple_identifier))))))))
+
+================================================================================
+Parenthesis on the next line that Kotlin still attaches
+================================================================================
+
+class S(project: Project) : Abstract<X.State>
+                            (ID, project, State()),
+                            Persistent<X.State> {
+}
+
+class F(c: C)
+  : Base<A, B>
+    (c, D) {
+}
+
+val o = object : Base
+    (x) {}
+
+enum class E {
+    A
+    (1),
+    B(2)
+}
+
+@Suppress
+("unused")
+class G
+
+val p: Int
+    get
+    () = 1
+
+fun f() {
+    foo()
+    (a as B).c()
+    super<T>.g()
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (simple_identifier)
+        (user_type
+          (type_identifier))))
+    (delegation_specifier
+      (constructor_invocation
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier)
+                (type_identifier)))))
+        (value_arguments
+          (value_argument
+            (simple_identifier))
+          (value_argument
+            (simple_identifier))
+          (value_argument
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments)))))))
+    (delegation_specifier
+      (user_type
+        (type_identifier)
+        (type_arguments
+          (type_projection
+            (user_type
+              (type_identifier)
+              (type_identifier))))))
+    (class_body))
+  (class_declaration
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (simple_identifier)
+        (user_type
+          (type_identifier))))
+    (delegation_specifier
+      (constructor_invocation
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier)))
+            (type_projection
+              (user_type
+                (type_identifier)))))
+        (value_arguments
+          (value_argument
+            (simple_identifier))
+          (value_argument
+            (simple_identifier)))))
+    (class_body))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (object_literal
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (type_identifier))
+          (value_arguments
+            (value_argument
+              (simple_identifier)))))
+      (class_body)))
+  (class_declaration
+    (type_identifier)
+    (enum_class_body
+      (enum_entry
+        (simple_identifier)
+        (value_arguments
+          (value_argument
+            (integer_literal))))
+      (enum_entry
+        (simple_identifier)
+        (value_arguments
+          (value_argument
+            (integer_literal))))))
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (type_identifier))
+          (value_arguments
+            (value_argument
+              (string_literal
+                (string_content)))))))
+    (type_identifier))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier)
+      (user_type
+        (type_identifier))))
+  (getter
+    (function_body
+      (integer_literal)))
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body
+      (statements
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments)))
+        (call_expression
+          (navigation_expression
+            (parenthesized_expression
+              (as_expression
+                (simple_identifier)
+                (user_type
+                  (type_identifier))))
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments)))
+        (call_expression
+          (navigation_expression
+            (super_expression
+              (user_type
+                (type_identifier)))
+            (navigation_suffix
+              (simple_identifier)))
+          (call_suffix
+            (value_arguments)))))))

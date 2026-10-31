@@ -299,6 +299,10 @@ module.exports = grammar({
     // Never produced: valid exactly where an `if` may take its `else`, so the scanner can tell
     // an if's `else` on the next line from a when entry `else if guard ->`.
     $._else_hint,
+    // Never produced: valid exactly where a `(` on the next line still belongs to the construct
+    // before it, the arguments of a supertype or an annotation, of an enum entry, or the
+    // parameters of an accessor (see newline_bracket_continues).
+    $._paren_hint,
     $._modifier_hint,
   ],
 
@@ -490,14 +494,18 @@ module.exports = grammar({
       seq("suspend", $.function_type)
     )),
 
-    constructor_invocation: $ => seq($.user_type, $.value_arguments),
+    constructor_invocation: $ => seq($.user_type, optional($._paren_hint), $.value_arguments),
 
     // Annotation-scoped variant with prec(1) to resolve the shift/reduce
     // conflict at `user_type • (` — always shift (consume `(` as constructor
     // args). This matches Kotlin semantics where `(` after an annotation name
     // is always constructor arguments. Scoped here rather than on the shared
     // constructor_invocation to avoid changing delegation_specifier behavior.
-    _annotation_constructor_invocation: $ => prec(1, seq($.user_type, $.value_arguments)),
+    _annotation_constructor_invocation: $ => prec(1, seq(
+      $.user_type,
+      optional($._paren_hint),
+      $.value_arguments
+    )),
 
     _annotated_delegation_specifier: $ => seq(repeat($.annotation), $.delegation_specifier),
 
@@ -713,6 +721,7 @@ module.exports = grammar({
       optional($.modifiers),
       "get",
       optional(seq(
+        optional($._paren_hint),
         "(", ")",
         optional(seq(":", $._type)),
         $.function_body
@@ -723,6 +732,7 @@ module.exports = grammar({
       optional($.modifiers),
       "set",
       optional(seq(
+        optional($._paren_hint),
         "(",
         $.parameter_with_optional_type,
         ")",
@@ -775,7 +785,7 @@ module.exports = grammar({
     enum_entry: $ => seq(
       optional($.modifiers),
       $.simple_identifier,
-      optional($.value_arguments),
+      optional(seq(optional($._paren_hint), $.value_arguments)),
       optional($.class_body)
     ),
 
