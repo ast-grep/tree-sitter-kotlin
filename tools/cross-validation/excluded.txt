@@ -81,7 +81,6 @@ AnnotatedIntersections
 AssertNotNull
 BackslashInString
 CallsInWhen
-CollectionLiterals
 CommentsBinding
 Constructors
 ControlStructures

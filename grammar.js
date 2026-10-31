@@ -1173,11 +1173,15 @@ module.exports = grammar({
     parenthesized_expression: $ => seq("(", $._expression, ")"),
 
     // https://kotlinlang.org/spec/syntax-and-grammar.html#grammar-rule-collectionLiteral
+    // Empty in an annotation argument too (`storages = []`), as Kotlin's parser allows
+    // (parseCollectionLiteralExpression, canBeEmpty).
     collection_literal: $ => seq(
       "[",
-      $._expression,
-      repeat(seq(",", $._expression)),
-      optional(","),
+      optional(seq(
+        $._expression,
+        repeat(seq(",", $._expression)),
+        optional(","),
+      )),
       "]"),
 
     _literal_constant: $ => choice(

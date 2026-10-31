@@ -605,3 +605,46 @@ class A(@all:Positive val x: Int) {
               (value_arguments
                 (value_argument
                   (simple_identifier))))))))))
+
+================================================================================
+Empty collection literals as annotation arguments and defaults
+================================================================================
+
+annotation class A(val xs: Array<String> = [])
+
+@State(name = "S", storages = [])
+class S
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (type_identifier)
+    (primary_constructor
+      (class_parameter
+        (binding_pattern_kind)
+        (simple_identifier)
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier)))))
+        (collection_literal))))
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (type_identifier))
+          (value_arguments
+            (value_argument
+              (simple_identifier)
+              (string_literal
+                (string_content)))
+            (value_argument
+              (simple_identifier)
+              (collection_literal))))))
+    (type_identifier)))
