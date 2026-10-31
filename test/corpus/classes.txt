@@ -1460,3 +1460,69 @@ class G : P by envs + extra {
               (type_identifier))))
         (function_body
           (null_literal))))))
+
+================================================================================
+Comment before a primary constructor
+================================================================================
+
+class A
+/**
+ * doc
+ */ internal constructor(val x: Int)
+class B
+@Suppress("unused") // why
+constructor() : D()
+class C
+// comment
+private @Inject constructor()
+class F
+/** doc */ fun f() {}
+
+---
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (multiline_comment)
+    (primary_constructor
+      (modifiers
+        (visibility_modifier))
+      (class_parameter
+        (binding_pattern_kind)
+        (simple_identifier)
+        (user_type
+          (type_identifier)))))
+  (class_declaration
+    (type_identifier)
+    (primary_constructor
+      (modifiers
+        (annotation
+          (constructor_invocation
+            (user_type
+              (type_identifier))
+            (value_arguments
+              (value_argument
+                (string_literal
+                  (string_content)))))))
+      (line_comment))
+    (delegation_specifier
+      (constructor_invocation
+        (user_type
+          (type_identifier))
+        (value_arguments))))
+  (class_declaration
+    (type_identifier)
+    (line_comment)
+    (primary_constructor
+      (modifiers
+        (visibility_modifier)
+        (annotation
+          (user_type
+            (type_identifier))))))
+  (class_declaration
+    (type_identifier))
+  (multiline_comment)
+  (function_declaration
+    (simple_identifier)
+    (function_value_parameters)
+    (function_body)))

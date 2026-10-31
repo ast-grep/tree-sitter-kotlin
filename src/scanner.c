@@ -321,17 +321,6 @@ static bool scan_for_word(TSLexer *lexer, const char* word, unsigned len) {
     return true;
 }
 
-// Check if a sequence of characters matches the given word and is followed
-// by a non-word character. Uses skip() so characters are not included in
-// the current token.
-static bool check_word(TSLexer *lexer, const char *word, unsigned len) {
-  for (unsigned i = 0; i < len; i++) {
-    if (lexer->lookahead != word[i]) return false;
-    skip(lexer);
-  }
-  return !is_word_char(lexer->lookahead);
-}
-
 // Skip whitespace (space, tab, newline, CR) and comments (// and nested /* */)
 // using skip() so characters are not included in the current token.
 // Returns false if a bare '/' is encountered (not a comment), true otherwise.
@@ -412,75 +401,77 @@ static bool where_starts_constraints(TSLexer *lexer) {
   return lexer->lookahead != ':';
 }
 
-// Check if the current position has a visibility modifier (public, private,
-// protected, internal) followed by horizontal whitespace and "constructor".
-// Uses skip() — safe to call speculatively since no token boundary is changed.
-static bool check_modifier_then_constructor(TSLexer *lexer) {
-  // Buffer the first word to identify the modifier
-  char word[20];
+// Read an alphanumeric word with skip(), so it is not part of the current token, and return its
+// length. A word longer than the buffer is consumed, truncated to nothing and matches no keyword
+// (length 0, as when there is no word).
+static unsigned read_word(TSLexer *lexer, char *word, unsigned size) {
   unsigned len = 0;
-  while (is_word_char(lexer->lookahead) && len < 19) {
-    word[len++] = (char)lexer->lookahead;
+  while (is_word_char(lexer->lookahead)) {
+    if (len + 1 < size) word[len] = (char)lexer->lookahead;
+    len++;
     skip(lexer);
   }
+  if (len + 1 > size) len = 0;
   word[len] = '\0';
-
-  if (strcmp(word, "public") != 0 && strcmp(word, "private") != 0 &&
-      strcmp(word, "protected") != 0 && strcmp(word, "internal") != 0) {
-    return false;
-  }
-
-  // Skip horizontal whitespace (not newlines)
-  while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
-
-  return check_word(lexer, "constructor", 11);
+  return len;
 }
 
-// Look ahead past one or more annotations (e.g. @Bar, @com.example.Bar,
-// @Bar(x=1)) and optional visibility modifier, then check for 'constructor'.
-// All characters are consumed with skip() so nothing affects token boundaries.
-static bool check_annotation_then_constructor(TSLexer *lexer) {
-  // Skip one or more '@annotation' sequences
-  while (lexer->lookahead == '@') {
-    skip(lexer); // skip '@'
-    if (!is_word_char(lexer->lookahead)) return false;
-    // Read annotation name, including dot-separated qualifiers
-    // (e.g. com.example.Inject)
+// Skip one annotation (e.g. @Bar, @com.example.Bar, @Bar(x=1)) at '@'.
+static bool skip_annotation(TSLexer *lexer) {
+  skip(lexer); // skip '@'
+  if (!is_word_char(lexer->lookahead)) return false;
+  // Read annotation name, including dot-separated qualifiers
+  // (e.g. com.example.Inject)
+  while (is_word_char(lexer->lookahead)) skip(lexer);
+  while (lexer->lookahead == '.') {
+    skip(lexer); // skip '.'
+    if (!is_word_char(lexer->lookahead)) break;
     while (is_word_char(lexer->lookahead)) skip(lexer);
-    while (lexer->lookahead == '.') {
-      skip(lexer); // skip '.'
-      if (!is_word_char(lexer->lookahead)) break;
-      while (is_word_char(lexer->lookahead)) skip(lexer);
-    }
-    // Skip optional '(...)' argument list (handle nested parens and strings)
-    if (lexer->lookahead == '(') {
-      unsigned depth = 1;
-      skip(lexer);
-      while (depth > 0 && lexer->lookahead != '\0' && !lexer->eof(lexer)) {
-        if (lexer->lookahead == '"') {
-          // Skip over string literal to avoid miscounting parens inside strings
-          skip(lexer);
-          while (lexer->lookahead != '"' && lexer->lookahead != '\0' && !lexer->eof(lexer)) {
-            if (lexer->lookahead == '\\') skip(lexer); // skip escaped char
-            skip(lexer);
-          }
-          if (lexer->lookahead == '"') skip(lexer); // skip closing quote
-        } else {
-          if (lexer->lookahead == '(') depth++;
-          else if (lexer->lookahead == ')') depth--;
+  }
+  // Skip optional '(...)' argument list (handle nested parens and strings)
+  if (lexer->lookahead == '(') {
+    unsigned depth = 1;
+    skip(lexer);
+    while (depth > 0 && lexer->lookahead != '\0' && !lexer->eof(lexer)) {
+      if (lexer->lookahead == '"') {
+        // Skip over string literal to avoid miscounting parens inside strings
+        skip(lexer);
+        while (lexer->lookahead != '"' && lexer->lookahead != '\0' && !lexer->eof(lexer)) {
+          if (lexer->lookahead == '\\') skip(lexer); // skip escaped char
           skip(lexer);
         }
+        if (lexer->lookahead == '"') skip(lexer); // skip closing quote
+      } else {
+        if (lexer->lookahead == '(') depth++;
+        else if (lexer->lookahead == ')') depth--;
+        skip(lexer);
       }
     }
-    // Skip whitespace and newlines between annotations or before constructor
-    while (iswspace(lexer->lookahead)) skip(lexer);
   }
-  // Allow an optional visibility modifier before 'constructor'
-  if (is_word_char(lexer->lookahead) && lexer->lookahead != 'c') {
-    return check_modifier_then_constructor(lexer);
+  return true;
+}
+
+// In a class header, look past annotations, visibility modifiers and comments, in any order
+// (`private @Inject constructor`, `@A // why\nconstructor`), for the `constructor` keyword of a
+// primary constructor. All characters are consumed with skip() so nothing affects token
+// boundaries.
+static bool primary_constructor_follows(TSLexer *lexer) {
+  for (;;) {
+    if (lexer->lookahead == '@') {
+      if (!skip_annotation(lexer)) return false;
+    } else if (is_word_char(lexer->lookahead)) {
+      char word[16];
+      read_word(lexer, word, sizeof word);
+      if (strcmp(word, "constructor") == 0) return true;
+      if (strcmp(word, "public") != 0 && strcmp(word, "private") != 0 &&
+          strcmp(word, "protected") != 0 && strcmp(word, "internal") != 0) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+    if (!skip_whitespace_and_comments(lexer)) return false;
   }
-  // Check directly for 'constructor'
-  return check_word(lexer, "constructor", 11);
 }
 
 // Kotlin ends a postfix expression at a newline before '(', '[' or '{'
@@ -548,18 +539,6 @@ static bool word_in(const char *word, const char *const *words, unsigned count) 
     if (strcmp(word, words[i]) == 0) return true;
   }
   return false;
-}
-
-// Reads an identifier-like word into `word`; 0 when there is none or it is too long for a keyword.
-static unsigned read_word(TSLexer *lexer, char *word, unsigned size) {
-  unsigned len = 0;
-  while (is_word_char(lexer->lookahead)) {
-    if (len + 1 >= size) return 0;
-    word[len++] = (char)lexer->lookahead;
-    skip(lexer);
-  }
-  word[len] = '\0';
-  return len;
 }
 
 #define WORD_IN(word, words) word_in(word, words, sizeof(words) / sizeof(words[0]))
@@ -782,7 +761,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case 'i':
         if (valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] &&
             !valid_symbols[STRING_CONTENT] &&
-            check_modifier_then_constructor(lexer)) {
+            primary_constructor_follows(lexer)) {
           return false;
         }
         // Note: lexer has advanced past the word. For "instanceof", scan_for_word
@@ -796,7 +775,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case 'p':
         if (valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] &&
             !valid_symbols[STRING_CONTENT] &&
-            check_modifier_then_constructor(lexer)) {
+            primary_constructor_follows(lexer)) {
           return false;
         }
         return true;
@@ -838,7 +817,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols,
       case '@':
         if (valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] &&
             !valid_symbols[STRING_CONTENT] &&
-            check_annotation_then_constructor(lexer)) {
+            primary_constructor_follows(lexer)) {
           return false;
         }
         return true;
