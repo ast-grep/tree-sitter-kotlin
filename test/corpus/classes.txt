@@ -1526,3 +1526,85 @@ class F
     (simple_identifier)
     (function_value_parameters)
     (function_body)))
+
+================================================================================
+Explicit backing field
+================================================================================
+
+class A {
+  val component: JComponent
+    field = ListItemPanel()
+  val items: List<Int>
+    private field: MutableList<Int> = mutableListOf()
+    get() = field
+  var x: Int = 0
+    set(v) {
+      val old = field
+      field = v
+    }
+}
+
+---
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (binding_pattern_kind)
+        (variable_declaration
+          (simple_identifier)
+          (user_type
+            (type_identifier))))
+      (backing_field
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments))))
+      (property_declaration
+        (binding_pattern_kind)
+        (variable_declaration
+          (simple_identifier)
+          (user_type
+            (type_identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (type_identifier)))))))
+      (backing_field
+        (modifiers
+          (visibility_modifier))
+        (user_type
+          (type_identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (type_identifier)))))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments))))
+      (getter
+        (function_body
+          (simple_identifier)))
+      (property_declaration
+        (binding_pattern_kind)
+        (variable_declaration
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (integer_literal))
+      (setter
+        (parameter_with_optional_type
+          (simple_identifier))
+        (function_body
+          (statements
+            (property_declaration
+              (binding_pattern_kind)
+              (variable_declaration
+                (simple_identifier))
+              (simple_identifier))
+            (assignment
+              (directly_assignable_expression
+                (simple_identifier))
+              (simple_identifier))))))))

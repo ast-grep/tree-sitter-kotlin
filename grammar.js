@@ -623,6 +623,7 @@ module.exports = grammar({
 
     _class_member_declaration: $ => choice(
       $._declaration,
+      $.backing_field,
       $.companion_object,
       $.anonymous_initializer,
       $.secondary_constructor
@@ -712,6 +713,17 @@ module.exports = grammar({
         seq($.getter, optional($.setter)),
         seq($.setter, optional($.getter)),
       ))
+    )),
+
+    // Kotlin 2.x explicit backing field (KEEP explicit-backing-fields, PSI BACKING_FIELD):
+    // `val items: List<Int>\n  field = mutableListOf()`. Like a getter on the line after its property,
+    // it is a class member next to the property (see `_declaration`); a block has no such member, so
+    // `field = v` in a setter body stays an assignment.
+    backing_field: $ => prec.right(seq(
+      optional($.modifiers),
+      "field",
+      optional(seq(":", $._type)),
+      optional(seq("=", $._expression)),
     )),
 
     property_delegate: $ => seq(optional($._by_delegation_hint), "by", $._expression),
