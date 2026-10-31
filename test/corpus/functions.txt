@@ -367,6 +367,73 @@ Function block with trailing comma
         (simple_identifier)))))
 
 ================================================================================
+Anonymous function with untyped parameters
+================================================================================
+
+val a = unwrap(e, fun(expression, isNegated): Check? { return null })
+val b = visitor(fun(_) {})
+val c = fun(x: Int, y): Int = x
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (call_expression
+      (simple_identifier)
+      (call_suffix
+        (value_arguments
+          (value_argument
+            (simple_identifier))
+          (value_argument
+            (anonymous_function
+              (function_value_parameters
+                (parameter
+                  (simple_identifier))
+                (parameter
+                  (simple_identifier)))
+              (nullable_type
+                (user_type
+                  (type_identifier))
+                (quest))
+              (function_body
+                (statements
+                  (jump_expression
+                    (null_literal))))))))))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (call_expression
+      (simple_identifier)
+      (call_suffix
+        (value_arguments
+          (value_argument
+            (anonymous_function
+              (function_value_parameters
+                (parameter
+                  (simple_identifier)))
+              (function_body)))))))
+  (property_declaration
+    (binding_pattern_kind)
+    (variable_declaration
+      (simple_identifier))
+    (anonymous_function
+      (function_value_parameters
+        (parameter
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (parameter
+          (simple_identifier)))
+      (user_type
+        (type_identifier))
+      (function_body
+        (simple_identifier)))))
+
+================================================================================
 Context parameters before a function
 ================================================================================
 

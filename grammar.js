@@ -1078,10 +1078,27 @@ module.exports = grammar({
       optional("suspend"),
       "fun",
       optional(seq(sep1($._simple_user_type, "."), ".")), // TODO
-      $.function_value_parameters,
+      alias($._anonymous_function_value_parameters, $.function_value_parameters),
       optional(seq(":", $._type)),
       optional($.function_body)
     )),
+
+    // An anonymous function may leave its parameter types out, `fun(a, b): T { }`
+    // (Kotlin spec: anonymousFunction uses parametersWithOptionalType).
+    _anonymous_function_value_parameters: $ => seq(
+      "(",
+      optional(sep1($._anonymous_function_value_parameter, ",")),
+      optional(","),
+      ")"
+    ),
+
+    _anonymous_function_value_parameter: $ => seq(
+      optional($.parameter_modifiers),
+      alias($._parameter_with_optional_type, $.parameter),
+      optional(seq("=", $._expression))
+    ),
+
+    _parameter_with_optional_type: $ => seq($.simple_identifier, optional(seq(":", $._type))),
 
     _function_literal: $ => choice(
       $.lambda_literal,
